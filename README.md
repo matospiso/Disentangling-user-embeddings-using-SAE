@@ -1,3 +1,5 @@
+# Disentangling Interaction-Based User Embeddings Using Sparse Autoencoders
+
 ### Environment setup
 ```bash
 conda create -y -n sae python==3.11
