@@ -14,7 +14,6 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, fi
     }
     os.makedirs("/".join(filepath.split("/")[:-1]), exist_ok=True)
     torch.save(checkpoint, filepath)
-    print(f"Checkpoint saved to {filepath}")
 
 
 def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, filepath: str, device: torch.device):
