@@ -72,9 +72,9 @@ def train_elsa(cfg: dict):
                 pbar.set_postfix_str(
                     pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
                 )
-                if best_result < np.mean(eval_results):
-                    best_result = np.mean(eval_results)
-                    save_checkpoint(elsa, optimizer, epoch + 1, cfg["checkpoint_path"])
+        if best_result < np.mean(eval_results):
+            best_result = np.mean(eval_results)
+            save_checkpoint(elsa, optimizer, epoch + 1, cfg["checkpoint_path"])
 
 
 if __name__ == "__main__":
