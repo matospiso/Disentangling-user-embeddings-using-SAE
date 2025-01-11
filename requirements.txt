@@ -1,0 +1,7 @@
+numpy
+scipy
+polars
+torch
+jupyter
+tqdm
+umap-learn
