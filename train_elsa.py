@@ -7,6 +7,7 @@ import scipy.sparse as sp
 
 from elsa import ELSA, l2_normalize, mse
 from interaction_dataset import InteractionDataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
+from util import CHECKPOINT_FOLDER, save_checkpoint, load_checkpoint
 
 
 def evaluate_recall_at_k(model, input_csr: sp.csr_matrix, target_csr: sp.csr_matrix, k: int, batch_size: int, device: torch.device) -> np.ndarray:
@@ -46,7 +47,14 @@ def train_elsa(cfg: dict):
     elsa = ELSA(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(cfg["device"])
     optimizer = optim.Adam(elsa.parameters(), lr=cfg["lr"])
 
-    for epoch in range(cfg["epochs"]):
+    try:
+        start_epoch = load_checkpoint(elsa, optimizer, cfg["checkpoint_path"], cfg["device"])
+    except FileNotFoundError:
+        start_epoch = 0
+        print("No checkpoint found, starting from scratch.")
+
+    best_result = 0.0
+    for epoch in range(start_epoch, cfg["epochs"]):
         elsa.train()
         pbar = tqdm(dataloader)
         for i, batch in enumerate(pbar):
@@ -64,7 +72,9 @@ def train_elsa(cfg: dict):
                 pbar.set_postfix_str(
                     pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
                 )
-                # TODO save checkpoint
+                if best_result < np.mean(eval_results):
+                    best_result = np.mean(eval_results)
+                    save_checkpoint(elsa, optimizer, epoch + 1, cfg["checkpoint_path"])
 
 
 if __name__ == "__main__":
@@ -81,4 +91,5 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
     cfg["device"] = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.mps.is_available() else torch.device("cpu")
+    cfg["checkpoint_path"] = f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/elsa_e{cfg['embedding_dim']}.ckpt"
     train_elsa(cfg)
