@@ -81,4 +81,4 @@ class InteractionDataloader:
         next_i = min(self.i + self.batch_size, self.dataset_size)
         batch = self.user_item_csr[self.permutation[self.i : next_i]].toarray()
         self.i = next_i
-        return torch.tensor(batch, requires_grad=True, device=self.device)
+        return torch.tensor(batch, device=self.device)
