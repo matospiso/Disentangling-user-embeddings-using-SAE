@@ -43,7 +43,7 @@ def train_elsa(cfg: dict):
     print(f"Test split info: users={test_csr.shape[0]}, items={test_csr.shape[1]}, interactions={test_csr.nnz}")
 
     dataloader = InteractionDataloader(train_csr, cfg["batch_size"], cfg["device"], cfg["seed"])
-    elsa = ELSA(train_csr.shape[1], cfg["embedding_dim"]).to(cfg["device"])
+    elsa = ELSA(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(cfg["device"])
     optimizer = optim.Adam(elsa.parameters(), lr=cfg["lr"])
 
     for epoch in range(cfg["epochs"]):
@@ -62,7 +62,7 @@ def train_elsa(cfg: dict):
                 val_inputs, val_targets = split_input_target_interactions(val_csr, cfg["target_interaction_ratio"], cfg["seed"])
                 eval_results = evaluate_recall_at_k(elsa, val_inputs, val_targets, cfg["eval_topk"], cfg["batch_size"], cfg["device"])
                 pbar.set_postfix_str(
-                    pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results)/np.sqrt(len(eval_results)):.4f}"
+                    pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
                 )
                 # TODO save checkpoint
 

@@ -11,9 +11,11 @@ def mse(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
 
 
 class ELSA(nn.Module):
-    def __init__(self, input_dim, embedding_dim):
+    def __init__(self, input_dim: int, embedding_dim: int, seed: int):
         super().__init__()
-        self.encoder = nn.Parameter(nn.init.xavier_uniform_(torch.empty([input_dim, embedding_dim])))
+        rng = torch.Generator()
+        rng.manual_seed(seed)
+        self.encoder = nn.Parameter(nn.init.xavier_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
         self.normalize_encoder()
 
     def normalize_encoder(self) -> None:
