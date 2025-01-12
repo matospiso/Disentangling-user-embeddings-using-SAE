@@ -59,10 +59,10 @@ def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: 
     return inputs, targets
 
 
-class InteractionDataloader:
-    def __init__(self, user_item_csr: sp.csr_matrix, batch_size: int, device: torch.device, seed: int):
-        self.user_item_csr = user_item_csr
-        self.dataset_size = self.user_item_csr.shape[0]
+class Dataloader:
+    def __init__(self, data: sp.csr_matrix | np.ndarray | torch.Tensor, batch_size: int, device: torch.device, seed: int):
+        self.data = data
+        self.dataset_size = self.data.shape[0]
         self.batch_size = batch_size
         self.device = device
         self.rng = np.random.default_rng(seed)
@@ -79,6 +79,8 @@ class InteractionDataloader:
         if self.i >= self.dataset_size:
             raise StopIteration
         next_i = min(self.i + self.batch_size, self.dataset_size)
-        batch = self.user_item_csr[self.permutation[self.i : next_i]].toarray()
+        batch = self.data[self.permutation[self.i : next_i]]
+        if isinstance(batch, sp.csr_matrix):
+            batch = batch.toarray()
         self.i = next_i
         return torch.tensor(batch, device=self.device)

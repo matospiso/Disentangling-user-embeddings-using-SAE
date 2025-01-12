@@ -6,7 +6,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import scipy.sparse as sp
 
-from interaction_dataset import InteractionDataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
+from datasets import Dataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
 from util import get_checkpoint_filepath, save_checkpoint, load_checkpoint
 
 
@@ -22,9 +22,9 @@ def evaluate_recall_at_k(model, input_csr: sp.csr_matrix, target_csr: sp.csr_mat
         topk_scores, topk_indices = torch.topk(scores, k)
         topk_indices = topk_indices.detach().cpu().numpy()
         batch_results = []
-        for i in range(target_batch.shape[0]):
-            predicted_indices = topk_indices[i]
-            target_indices = target_batch.indices[target_batch.indptr[i] : target_batch.indptr[i + 1]]
+        for j in range(target_batch.shape[0]):
+            predicted_indices = topk_indices[j]
+            target_indices = target_batch.indices[target_batch.indptr[j] : target_batch.indptr[j + 1]]
             r = np.isin(target_indices, predicted_indices, assume_unique=True).sum() / len(target_indices)
             batch_results.append(r)
         metric_array.extend(batch_results)
@@ -43,7 +43,7 @@ def train_elsa(cfg: dict, device: torch.device):
     print(f"Val split info: users={val_csr.shape[0]}, items={val_csr.shape[1]}, interactions={val_csr.nnz}")
     print(f"Test split info: users={test_csr.shape[0]}, items={test_csr.shape[1]}, interactions={test_csr.nnz}")
 
-    dataloader = InteractionDataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
+    dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     model = model_class(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
