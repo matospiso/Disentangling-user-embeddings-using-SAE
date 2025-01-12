@@ -19,7 +19,7 @@ class ELSA(nn.Module):
         super().__init__()
         rng = torch.Generator()
         rng.manual_seed(seed)
-        self.encoder = nn.Parameter(nn.init.xavier_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
+        self.encoder = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
         self.normalize_encoder()
 
     def normalize_encoder(self) -> None:
