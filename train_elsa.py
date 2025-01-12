@@ -50,7 +50,7 @@ def train_elsa(cfg: dict, device: torch.device):
 
     checkpoint_path = get_checkpoint_filepath(cfg)
     try:
-        start_epoch = load_checkpoint(model, optimizer, cfg, checkpoint_path, device)
+        start_epoch, _ = load_checkpoint(model, optimizer, checkpoint_path, device, cfg)
     except FileNotFoundError:
         print("No checkpoint found, starting from scratch.")
         start_epoch = 0

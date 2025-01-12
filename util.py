@@ -17,7 +17,7 @@ def get_checkpoint_filepath(cfg: dict) -> str:
     return f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{cfg['model_class']}-{cfg['embedding_dim']}-{hash_dict(cfg)}.ckpt"
 
 
-def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, job_cfg: dict, filepath: str):
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, job_cfg: dict, filepath: str) -> None:
     checkpoint = {
         "epoch": epoch,
         "job_cfg": job_cfg,
@@ -28,14 +28,19 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, jo
     torch.save(checkpoint, filepath)
 
 
-def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, job_cfg: dict, filepath: str, device: torch.device):
+def load_config_from_checkpoint(filepath: str) -> dict:
+    return torch.load(filepath, weights_only=False)["job_cfg"]
+
+
+def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, filepath: str, device: torch.device, job_cfg: dict | None = None):
     checkpoint = torch.load(filepath, map_location=device, weights_only=False)
-    if not checkpoint["job_cfg"] == job_cfg:
+    cfg = checkpoint["job_cfg"]
+    if job_cfg is not None and job_cfg != cfg:
         print(f"Loaded checkpoint from {filepath} does not match current job config\nCheckpoint cfg: {checkpoint['job_cfg']}\nCurrent cfg: {job_cfg}")
         print("Starting from scratch.")
-        return 0
+        return 0, None
     model.load_state_dict(checkpoint["model_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     epoch = checkpoint["epoch"]
     print(f"Loaded checkpoint from {filepath} (after {epoch} epochs)")
-    return epoch
+    return epoch, cfg

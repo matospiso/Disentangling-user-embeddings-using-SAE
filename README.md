@@ -31,5 +31,5 @@ MODEL_CLASS-EMBEDDING_DIM-HASH.ckpt  # e.g., ELSA-512-92a7c516.ckpt
 ```
 where HASH is the first 8 characters of the SHA256 fingerprint of the serialized job config. Only the `model_class` and `embedding_dim` are apparent from the naming. To inspect the full config stored in the checkpoint, run
 ```bash
-python -c "from torch import load; checkpoint_path='checkpoints/DATASET_NAME/CHECKPOINT_FILE'; print(load(checkpoint_path, weights_only=False)['job_cfg'])"
+python -c "from util import load_config_from_checkpoint; filepath='checkpoints/DATASET_NAME/CHECKPOINT_FILE'; print(load_config_from_checkpoint(filepath))"
 ```
