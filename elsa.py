@@ -2,9 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-
-def l2_normalize(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
-    return x / x.norm(dim=dim, keepdim=True)
+from util import l2_normalize
 
 
 def normalized_mse_loss(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
@@ -22,6 +20,7 @@ class ELSA(nn.Module):
         self.encoder = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
         self.normalize_encoder()
 
+    @torch.no_grad()
     def normalize_encoder(self) -> None:
         self.encoder.data = l2_normalize(self.encoder.data)
         if self.encoder.grad is not None:
