@@ -82,7 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_user_ratio", type=float, default=0.1, help="Ratio of test users")
     parser.add_argument("--target_interaction_ratio", type=float, default=0.2, help="Ratio of interactions used as target")
     parser.add_argument("--model_module", type=str, default="elsa", help="Module containing ELSA model")
-    parser.add_argument("--model_class", type=str, default="ELSA", help="Module containing ELSA model")
+    parser.add_argument("--model_class", type=str, default="ELSA", help="Model class name")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of ELSA model")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
