@@ -18,8 +18,10 @@ def load_interactions(dataset_name: str) -> pl.DataFrame:
         .filter(pl.col("value") >= 4.0)
         .cast({"user_id": pl.String, "item_id": pl.String, "value": pl.Float32})
         .cast({"user_id": pl.Categorical, "item_id": pl.Categorical})
+        .collect()
     )
-    return interactions_df.collect()
+    print(f"Dataset info: users={interactions_df['user_id'].n_unique()}, items={interactions_df['item_id'].n_unique()}, interactions={len(interactions_df)}")
+    return interactions_df
 
 
 def convert_to_csr(interactions_df: pl.DataFrame) -> sp.csr_matrix:
@@ -40,6 +42,9 @@ def split_train_val_test_users(
     train = user_item_csr[p[: int(-(val_ratio + test_ratio) * len(p))]]
     val = user_item_csr[p[int(-(val_ratio + test_ratio) * len(p)) : int(-test_ratio * len(p))]]
     test = user_item_csr[p[int(-test_ratio * len(p)) :]]
+    print(f"Train split info: users={train.shape[0]}, items={train.shape[1]}, interactions={train.nnz}")
+    print(f"Val split info: users={val.shape[0]}, items={val.shape[1]}, interactions={val.nnz}")
+    print(f"Test split info: users={test.shape[0]}, items={test.shape[1]}, interactions={test.nnz}")
     return train, val, test
 
 

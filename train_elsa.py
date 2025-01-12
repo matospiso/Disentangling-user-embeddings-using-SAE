@@ -35,19 +35,13 @@ def train_elsa(cfg: dict, device: torch.device):
     print(f"Training ELSA model using config {cfg}")
 
     interactions_df = load_interactions(cfg["dataset"])
-    print(f"Dataset info: users={interactions_df['user_id'].n_unique()}, items={interactions_df['item_id'].n_unique()}, interactions={len(interactions_df)}")
     interactions_csr = convert_to_csr(interactions_df)
-
-    train_csr, val_csr, test_csr = split_train_val_test_users(interactions_csr, cfg["val_user_ratio"], cfg["test_user_ratio"], cfg["seed"])
-    print(f"Train split info: users={train_csr.shape[0]}, items={train_csr.shape[1]}, interactions={train_csr.nnz}")
-    print(f"Val split info: users={val_csr.shape[0]}, items={val_csr.shape[1]}, interactions={val_csr.nnz}")
-    print(f"Test split info: users={test_csr.shape[0]}, items={test_csr.shape[1]}, interactions={test_csr.nnz}")
-
+    train_csr, val_csr, _ = split_train_val_test_users(interactions_csr, cfg["val_user_ratio"], cfg["test_user_ratio"], cfg["seed"])
     dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
+
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     model = model_class(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
-
     checkpoint_path = get_checkpoint_filepath(cfg)
     try:
         start_epoch, _ = load_checkpoint(model, optimizer, checkpoint_path, device, cfg)
