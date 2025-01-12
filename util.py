@@ -13,6 +13,10 @@ def hash_dict(d: dict, length: int = 8) -> str:
     return sha256(serialized).hexdigest()[:length]
 
 
+def get_checkpoint_filepath(cfg: dict) -> str:
+    return f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{cfg['model_class']}-{cfg['embedding_dim']}-{hash_dict(cfg)}.ckpt"
+
+
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, job_cfg: dict, filepath: str):
     checkpoint = {
         "epoch": epoch,

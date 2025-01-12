@@ -1,13 +1,13 @@
 import argparse
+import importlib
 import numpy as np
 import torch
 import torch.optim as optim
 from tqdm import tqdm
 import scipy.sparse as sp
 
-from elsa import ELSA, l2_normalize, mse
 from interaction_dataset import InteractionDataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
-from util import CHECKPOINT_FOLDER, hash_dict, save_checkpoint, load_checkpoint
+from util import get_checkpoint_filepath, save_checkpoint, load_checkpoint
 
 
 def evaluate_recall_at_k(model, input_csr: sp.csr_matrix, target_csr: sp.csr_matrix, k: int, batch_size: int, device: torch.device) -> np.ndarray:
@@ -44,38 +44,35 @@ def train_elsa(cfg: dict, device: torch.device):
     print(f"Test split info: users={test_csr.shape[0]}, items={test_csr.shape[1]}, interactions={test_csr.nnz}")
 
     dataloader = InteractionDataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
+    model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
+    model = model_class(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
 
-    elsa = ELSA(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
-    optimizer = optim.Adam(elsa.parameters(), lr=cfg["lr"])
-    checkpoint_path = f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{ELSA.__name__}_{cfg['embedding_dim']}_{hash_dict(cfg)}.ckpt"
+    checkpoint_path = get_checkpoint_filepath(cfg)
     try:
-        start_epoch = load_checkpoint(elsa, optimizer, cfg, checkpoint_path, device)
+        start_epoch = load_checkpoint(model, optimizer, cfg, checkpoint_path, device)
     except FileNotFoundError:
         print("No checkpoint found, starting from scratch.")
         start_epoch = 0
 
     best_result = 0.0
     for epoch in range(start_epoch, cfg["epochs"]):
-        elsa.train()
+        model.train()
         pbar = tqdm(dataloader)
         for i, batch in enumerate(pbar):
-            loss = mse(l2_normalize(elsa(batch)), l2_normalize(batch))
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            elsa.normalize_encoder()
+            loss = model.train_step(optimizer, batch)
             pbar.set_description(f"Epoch {epoch + 1}/{cfg['epochs']}", refresh=False)
-            pbar.set_postfix({"Loss": loss.item()})
+            pbar.set_postfix({"Loss": loss})
             if i == len(pbar) - 1:
-                elsa.eval()
+                model.eval()
                 val_inputs, val_targets = split_input_target_interactions(val_csr, cfg["target_interaction_ratio"], cfg["seed"])
-                eval_results = evaluate_recall_at_k(elsa, val_inputs, val_targets, cfg["eval_topk"], cfg["batch_size"], device)
+                eval_results = evaluate_recall_at_k(model, val_inputs, val_targets, cfg["eval_topk"], cfg["batch_size"], device)
                 pbar.set_postfix_str(
                     pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
                 )
         if best_result < np.mean(eval_results):
             best_result = np.mean(eval_results)
-            save_checkpoint(elsa, optimizer, epoch + 1, cfg, checkpoint_path)
+            save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
 
 
 if __name__ == "__main__":
@@ -84,6 +81,8 @@ if __name__ == "__main__":
     parser.add_argument("--val_user_ratio", type=float, default=0.1, help="Ratio of validation users")
     parser.add_argument("--test_user_ratio", type=float, default=0.1, help="Ratio of test users")
     parser.add_argument("--target_interaction_ratio", type=float, default=0.2, help="Ratio of interactions used as target")
+    parser.add_argument("--model_module", type=str, default="elsa", help="Module containing ELSA model")
+    parser.add_argument("--model_class", type=str, default="ELSA", help="Module containing ELSA model")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of ELSA model")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")

@@ -1,18 +1,20 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 
 def l2_normalize(x: torch.Tensor, axis: int = -1) -> torch.Tensor:
     return x.div(x.pow(2).sum(axis, True).sqrt())
 
 
-def mse(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
-    return ((y_pred - y_true) ** 2).sum(-1).mean()
+def normalized_mse_loss(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
+    return ((l2_normalize(y_pred) - l2_normalize(y_true)) ** 2).sum(-1).mean()
 
 
 class ELSA(nn.Module):
     """Scalable Linear Shallow Autoencoder
     Paper: https://dl.acm.org/doi/abs/10.1145/3523227.3551482"""
+
     def __init__(self, input_dim: int, embedding_dim: int, seed: int):
         super().__init__()
         rng = torch.Generator()
@@ -31,3 +33,11 @@ class ELSA(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decode(self.encode(x)) - x
+
+    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> float:
+        loss = normalized_mse_loss(self(batch), batch)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        self.normalize_encoder()
+        return loss.item()
