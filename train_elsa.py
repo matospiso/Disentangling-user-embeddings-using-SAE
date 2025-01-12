@@ -48,10 +48,10 @@ def train_elsa(cfg: dict):
     optimizer = optim.Adam(elsa.parameters(), lr=cfg["lr"])
 
     try:
-        start_epoch = load_checkpoint(elsa, optimizer, cfg["checkpoint_path"], cfg["device"])
+        start_epoch = load_checkpoint(elsa, optimizer, cfg)
     except FileNotFoundError:
-        start_epoch = 0
         print("No checkpoint found, starting from scratch.")
+        start_epoch = 0
 
     best_result = 0.0
     for epoch in range(start_epoch, cfg["epochs"]):
@@ -74,7 +74,7 @@ def train_elsa(cfg: dict):
                 )
         if best_result < np.mean(eval_results):
             best_result = np.mean(eval_results)
-            save_checkpoint(elsa, optimizer, epoch + 1, cfg["checkpoint_path"])
+            save_checkpoint(elsa, optimizer, epoch + 1, cfg)
 
 
 if __name__ == "__main__":
@@ -91,5 +91,5 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
     cfg["device"] = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.mps.is_available() else torch.device("cpu")
-    cfg["checkpoint_path"] = f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/elsa_e{cfg['embedding_dim']}.ckpt"
+    cfg["checkpoint_path"] = f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{ELSA.__name__}_{cfg['embedding_dim']}.ckpt"
     train_elsa(cfg)
