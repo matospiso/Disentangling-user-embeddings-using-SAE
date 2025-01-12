@@ -32,7 +32,7 @@ def load_config_from_checkpoint(filepath: str) -> dict:
     return torch.load(filepath, weights_only=False)["job_cfg"]
 
 
-def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, filepath: str, device: torch.device, job_cfg: dict | None = None):
+def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, filepath: str, device: torch.device, job_cfg: dict | None = None) -> tuple[int, dict | None]:
     checkpoint = torch.load(filepath, map_location=device, weights_only=False)
     cfg = checkpoint["job_cfg"]
     if job_cfg is not None and job_cfg != cfg:
