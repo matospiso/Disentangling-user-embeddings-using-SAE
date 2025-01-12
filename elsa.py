@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-def l2_normalize(x: torch.Tensor, axis: int = -1) -> torch.Tensor:
-    return x.div(x.pow(2).sum(axis, True).sqrt())
+def l2_normalize(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
+    return x / x.norm(dim=dim, keepdim=True)
 
 
 def normalized_mse_loss(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
@@ -24,6 +24,8 @@ class ELSA(nn.Module):
 
     def normalize_encoder(self) -> None:
         self.encoder.data = l2_normalize(self.encoder.data)
+        if self.encoder.grad is not None:
+            self.encoder.grad -= (self.encoder.grad * self.encoder.data).sum(-1, keepdim=True) * self.encoder.data
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         return x @ self.encoder
@@ -38,6 +40,6 @@ class ELSA(nn.Module):
         loss = normalized_mse_loss(self(batch), batch)
         optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
         self.normalize_encoder()
+        optimizer.step()
         return loss.item()
