@@ -11,6 +11,8 @@ def mse(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
 
 
 class ELSA(nn.Module):
+    """Scalable Linear Shallow Autoencoder
+    Paper: https://dl.acm.org/doi/abs/10.1145/3523227.3551482"""
     def __init__(self, input_dim: int, embedding_dim: int, seed: int):
         super().__init__()
         rng = torch.Generator()
