@@ -6,7 +6,7 @@ from util import l2_normalize
 
 
 def normalized_mse_loss(y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
-    return ((l2_normalize(y_pred) - l2_normalize(y_true)) ** 2).sum(-1).mean()
+    return (l2_normalize(y_pred) - l2_normalize(y_true)).pow(2).sum(-1).mean()
 
 
 class ELSA(nn.Module):
