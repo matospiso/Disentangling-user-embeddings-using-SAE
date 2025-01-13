@@ -32,7 +32,7 @@ def train_elsa(cfg: dict, device: torch.device):
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     model = model_class(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
+    optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
     checkpoint_path = get_checkpoint_filepath(cfg)
     try:
         start_epoch, _ = load_checkpoint(model, optimizer, checkpoint_path, device, cfg)
@@ -74,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--beta1", type=float, default=0.9, help="Adam beta_1 coefficient")
+    parser.add_argument("--beta2", type=float, default=0.99, help="Adam beta_2 coefficient")
     parser.add_argument("--eval_topk", type=int, default=20, help="Evalutation top k")
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
