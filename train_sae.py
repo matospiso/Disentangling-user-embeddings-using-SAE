@@ -9,6 +9,9 @@ from datasets import Dataloader, convert_to_csr, load_interactions, split_input_
 from util import CHECKPOINT_FOLDER, get_checkpoint_filepath, load_config_from_checkpoint, save_checkpoint, load_checkpoint
 
 
+SAE_EXTRA_PARAMS = ["l1_coef", "k"]
+
+
 def train_sae(cfg: dict, device: torch.device):
     print(f"Training sparse autoencoder using config {cfg}")
 
@@ -34,8 +37,9 @@ def train_sae(cfg: dict, device: torch.device):
 
     dataloader = Dataloader(user_embeddings, cfg["batch_size"], device, cfg["seed"])
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    model = model_class(user_embeddings.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
+    extra_params = {k: cfg[k] for k in cfg.keys() if k in SAE_EXTRA_PARAMS}
+    model = model_class(user_embeddings.shape[1], cfg["embedding_dim"], cfg["seed"], **extra_params).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     checkpoint_path = get_checkpoint_filepath(cfg)
     try:
@@ -71,9 +75,13 @@ if __name__ == "__main__":
     parser.add_argument("--model_module", type=str, default="sae", help="Module containing SAE model")
     parser.add_argument("--model_class", type=str, default="BasicSAE", help="Model class name")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of SAE model")
+    parser.add_argument("--l1_coef", type=float, default=0.1, help="L1 loss coefficient (BasicSAE)")
+    parser.add_argument("--k", type=float, default=32, help="Top K parameter (TopKSAE, BatchTopKSAE)")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--beta1", type=float, default=0.9, help="Adam beta_1 coefficient")
+    parser.add_argument("--beta2", type=float, default=0.99, help="Adam beta_2 coefficient")
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.mps.is_available() else torch.device("cpu")

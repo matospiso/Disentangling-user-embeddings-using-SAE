@@ -48,14 +48,15 @@ class SAE(nn.Module):
 
 
 class BasicSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int):
+    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
         super().__init__(input_dim, embedding_dim, seed)
+        self.l1_coef = extra_params["l1_coef"]
 
     def compute_losses(self, x: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
         l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
         l1_loss = e.abs().sum(-1).mean()
         l0_loss = (e > 0).float().sum(-1).mean()
-        loss = l2_loss + 0.01 * l1_loss
+        loss = l2_loss + self.l1_coef * l1_loss
         return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
