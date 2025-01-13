@@ -64,11 +64,53 @@ class BasicSAE(SAE):
         e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
         x_out = e @ self.decoder_w + self.decoder_b
         if not self.training:
-            return self.destandardize_output(x_out, x_mean, x_std)
+            return self.destandardize_output(x_out, x_mean, x_std), None
         return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, x_out)
 
 
-class TopKSAE(SAE): ...
+class TopKSAE(SAE):
+    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, seed)
+        self.l1_coef = extra_params["l1_coef"]
+        self.k = extra_params["k"]
+
+    def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
+        l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
+        l1_loss = e_topk.abs().sum(-1).mean()
+        l0_loss = (e_topk > 0).float().sum(-1).mean()
+        loss = l2_loss + self.l1_coef * l1_loss
+        return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        x, x_mean, x_std = self.standardize_input(x)
+        e = (x - self.decoder_b) @ self.encoder_w + self.encoder_b
+        e_topk = torch.topk(e, self.k, dim=-1)
+        e_topk = torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
+        x_out = e_topk @ self.decoder_w + self.decoder_b
+        if not self.training:
+            return self.destandardize_output(x_out, x_mean, x_std), None
+        return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, e_topk, x_out)
 
 
-class BatchTopKSAE(SAE): ...
+class BatchTopKSAE(SAE):
+    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, seed)
+        self.l1_coef = extra_params["l1_coef"]
+        self.k = extra_params["k"]
+
+    def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
+        l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
+        l1_loss = e_topk.abs().sum(-1).mean()
+        l0_loss = (e_topk > 0).float().sum(-1).mean()
+        loss = l2_loss + self.l1_coef * l1_loss
+        return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        x, x_mean, x_std = self.standardize_input(x)
+        e = (x - self.decoder_b) @ self.encoder_w + self.encoder_b
+        e_topk = torch.topk(e.flatten(), self.k * e.shape[0], dim=-1)
+        e_topk = torch.zeros_like(e.flatten()).scatter(-1, e_topk.indices, e_topk.values).reshape(e.shape)
+        x_out = e_topk @ self.decoder_w + self.decoder_b
+        if not self.training:
+            return self.destandardize_output(x_out, x_mean, x_std), None
+        return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, e_topk, x_out)
