@@ -10,20 +10,16 @@ from util import get_checkpoint_filepath, save_checkpoint, load_checkpoint
 
 
 def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
-    metric_array = []
+    recall = []
     for input_batch, target_batch in zip(inputs, targets):
         scores = model(input_batch)
         scores = torch.where(input_batch != 0, 0, scores)  # mask input interactions
         topk_scores, topk_indices = torch.topk(scores, k)
-        topk_indices = topk_indices.detach().cpu().numpy()
-        batch_results = []
-        for row in range(target_batch.shape[0]):
-            predicted_indices = topk_indices[row]
-            target_indices = target_batch.indices[target_batch.indptr[row] : target_batch.indptr[row + 1]]
-            r = np.isin(target_indices, predicted_indices, assume_unique=True).sum() / len(target_indices)
-            batch_results.append(r)
-        metric_array.extend(batch_results)
-    return np.array(metric_array)
+        target_batch = target_batch.bool()
+        predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
+        r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
+        recall.append(r)
+    return torch.cat(recall).detach().cpu().numpy()
 
 
 def train_elsa(cfg: dict, device: torch.device):
@@ -56,7 +52,7 @@ def train_elsa(cfg: dict, device: torch.device):
                 model.eval()
                 val_inputs, val_targets = split_input_target_interactions(val_csr, cfg["target_interaction_ratio"], cfg["seed"])
                 eval_results = evaluate_recall_at_k(
-                    model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"]), cfg["eval_topk"]
+                    model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"], device), cfg["eval_topk"]
                 )
                 pbar.set_postfix_str(
                     pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
