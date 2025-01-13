@@ -4,31 +4,9 @@ import numpy as np
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-import scipy.sparse as sp
 
 from datasets import Dataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
 from util import CHECKPOINT_FOLDER, get_checkpoint_filepath, load_config_from_checkpoint, save_checkpoint, load_checkpoint
-
-
-def evaluate_recall_at_k(model, input_csr: sp.csr_matrix, target_csr: sp.csr_matrix, k: int, batch_size: int, device: torch.device) -> np.ndarray:
-    sample_size = input_csr.shape[0]
-    batch_count = -(-sample_size // batch_size)
-    metric_array = []
-    for i in range(batch_count):
-        input_batch = torch.tensor(input_csr[i * batch_size : min(sample_size, (i + 1) * batch_size)].toarray(), device=device)
-        target_batch = target_csr[i * batch_size : min(sample_size, (i + 1) * batch_size)]
-        scores = model(input_batch)
-        scores = torch.where(input_batch != 0, 0, scores)
-        topk_scores, topk_indices = torch.topk(scores, k)
-        topk_indices = topk_indices.detach().cpu().numpy()
-        batch_results = []
-        for i in range(target_batch.shape[0]):
-            predicted_indices = topk_indices[i]
-            target_indices = target_batch.indices[target_batch.indptr[i] : target_batch.indptr[i + 1]]
-            r = np.isin(target_indices, predicted_indices, assume_unique=True).sum() / len(target_indices)
-            batch_results.append(r)
-        metric_array.extend(batch_results)
-    return np.array(metric_array)
 
 
 def train_sae(cfg: dict, device: torch.device):
