@@ -4,27 +4,22 @@ import numpy as np
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-import scipy.sparse as sp
 
 from datasets import Dataloader, convert_to_csr, load_interactions, split_input_target_interactions, split_train_val_test_users
 from util import get_checkpoint_filepath, save_checkpoint, load_checkpoint
 
 
-def evaluate_recall_at_k(model, input_csr: sp.csr_matrix, target_csr: sp.csr_matrix, k: int, batch_size: int, device: torch.device) -> np.ndarray:
-    sample_size = input_csr.shape[0]
-    batch_count = -(-sample_size // batch_size)
+def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
     metric_array = []
-    for i in range(batch_count):
-        input_batch = torch.tensor(input_csr[i * batch_size : min(sample_size, (i + 1) * batch_size)].toarray(), device=device)
-        target_batch = target_csr[i * batch_size : min(sample_size, (i + 1) * batch_size)]
+    for input_batch, target_batch in zip(inputs, targets):
         scores = model(input_batch)
-        scores = torch.where(input_batch != 0, 0, scores)
+        scores = torch.where(input_batch != 0, 0, scores)  # mask input interactions
         topk_scores, topk_indices = torch.topk(scores, k)
         topk_indices = topk_indices.detach().cpu().numpy()
         batch_results = []
-        for j in range(target_batch.shape[0]):
-            predicted_indices = topk_indices[j]
-            target_indices = target_batch.indices[target_batch.indptr[j] : target_batch.indptr[j + 1]]
+        for row in range(target_batch.shape[0]):
+            predicted_indices = topk_indices[row]
+            target_indices = target_batch.indices[target_batch.indptr[row] : target_batch.indptr[row + 1]]
             r = np.isin(target_indices, predicted_indices, assume_unique=True).sum() / len(target_indices)
             batch_results.append(r)
         metric_array.extend(batch_results)
@@ -60,7 +55,9 @@ def train_elsa(cfg: dict, device: torch.device):
             if i == len(pbar) - 1:
                 model.eval()
                 val_inputs, val_targets = split_input_target_interactions(val_csr, cfg["target_interaction_ratio"], cfg["seed"])
-                eval_results = evaluate_recall_at_k(model, val_inputs, val_targets, cfg["eval_topk"], cfg["batch_size"], device)
+                eval_results = evaluate_recall_at_k(
+                    model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"]), cfg["eval_topk"]
+                )
                 pbar.set_postfix_str(
                     pbar.postfix + f", Recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}"
                 )
