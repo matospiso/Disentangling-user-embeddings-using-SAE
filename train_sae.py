@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_class", type=str, default="BasicSAE", help="Model class name")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of SAE model")
     parser.add_argument("--l1_coef", type=float, default=0.01, help="L1 loss coefficient (BasicSAE)")
-    parser.add_argument("--k", type=float, default=32, help="Top K parameter (TopKSAE, BatchTopKSAE)")
+    parser.add_argument("--k", type=int, default=32, help="Top K parameter (TopKSAE, BatchTopKSAE)")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
