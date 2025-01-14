@@ -35,10 +35,13 @@ class ELSA(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decode(self.encode(x)) - x
 
-    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> float:
-        loss = normalized_mse_loss(self(batch), batch)
+    def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
+        return {"Loss": normalized_mse_loss(self(batch), batch)}
+
+    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> dict[str, torch.Tensor]:
+        losses = self.compute_loss_dict(batch)
         optimizer.zero_grad()
-        loss.backward()
+        losses["Loss"].backward()
         self.normalize_encoder()
         optimizer.step()
-        return loss.item()
+        return losses

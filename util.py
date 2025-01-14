@@ -4,6 +4,9 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from tqdm import tqdm
+
+from datasets import Dataloader
 
 CHECKPOINT_FOLDER = "checkpoints"
 
@@ -13,8 +16,12 @@ def hash_dict(d: dict, length: int = 8) -> str:
     return sha256(serialized).hexdigest()[:length]
 
 
+def get_checkpoint_name(cfg: dict) -> str:
+    return f"{cfg['model_class']}-{cfg['embedding_dim']}-{hash_dict(cfg)}"
+
+
 def get_checkpoint_filepath(cfg: dict) -> str:
-    return f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{cfg['model_class']}-{cfg['embedding_dim']}-{hash_dict(cfg)}.ckpt"
+    return f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{get_checkpoint_name(cfg)}.ckpt"
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, job_cfg: dict, filepath: str) -> None:
@@ -51,3 +58,43 @@ def load_checkpoint(
 
 def l2_normalize(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
     return x / x.norm(dim=dim, keepdim=True)
+
+
+def run_training_loop(
+    model: nn.Module,
+    optimizer: optim.Optimizer,
+    train_dataloader: Dataloader,
+    val_dataloader: Dataloader,
+    cfg: dict,
+    device: torch.device,
+) -> None:
+    checkpoint_path = get_checkpoint_filepath(cfg)
+    try:
+        start_epoch, _ = load_checkpoint(model, optimizer, checkpoint_path, device, cfg)
+    except FileNotFoundError:
+        print("No checkpoint found, starting from scratch.")
+        start_epoch = 0
+    best_loss, epochs_without_improvement = float("inf"), 0
+    for epoch in range(start_epoch, cfg["epochs"]):
+        model.train()
+        pbar = tqdm(train_dataloader)
+        for i, batch in enumerate(pbar):
+            loss_dict = model.train_step(optimizer, batch)
+            pbar.set_description(f"Epoch {epoch + 1}/{cfg['epochs']}", refresh=False)
+            pbar.set_postfix({k: v.item() for k, v in loss_dict.items()})
+            if i == len(pbar) - 1:
+                model.eval()
+                val_losses = {k: 0.0 for k in loss_dict.keys()}
+                for val_batch in val_dataloader:
+                    _losses = {k: v.item() for k, v in model.compute_loss_dict(val_batch).items()}
+                    for k in val_losses.keys():
+                        val_losses[k] += _losses[k] * val_batch.shape[0] / val_dataloader.dataset_size
+                pbar.set_postfix_str(pbar.postfix + " | Val: " + ", ".join([f"{k}={v:.3f}" for k, v in val_losses.items()]))
+        if val_losses["Loss"] < best_loss:
+            best_loss, epochs_without_improvement = val_losses["Loss"], 0
+            save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
+        else:
+            epochs_without_improvement += 1
+        if epochs_without_improvement >= cfg["early_stopping"]:
+            print("Reached early stopping condition, terminating training.")
+            break

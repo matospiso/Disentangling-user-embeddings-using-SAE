@@ -9,7 +9,7 @@ DATASET_RATING_FILE = {
 }
 
 
-def load_interactions(dataset_name: str) -> pl.DataFrame:
+def load_interactions_dataframe(dataset_name: str) -> pl.DataFrame:
     interactions_df = pl.scan_csv(f"{DATA_FOLDER}/{dataset_name}/{DATASET_RATING_FILE[dataset_name]}")
     if dataset_name == "ml-25m":
         interactions_df = interactions_df.rename({"userId": "user_id", "movieId": "item_id", "rating": "value"})
@@ -46,6 +46,14 @@ def split_train_val_test_users(
     print(f"Val split info: users={val.shape[0]}, items={val.shape[1]}, interactions={val.nnz}")
     print(f"Test split info: users={test.shape[0]}, items={test.shape[1]}, interactions={test.nnz}")
     return train, val, test
+
+
+def prepare_interaction_data(cfg: dict) -> tuple[pl.DataFrame, sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]:
+    dataset = cfg["dataset"]
+    interactions_df = load_interactions_dataframe(dataset)
+    interactions_csr = convert_to_csr(interactions_df)
+    train_csr, val_csr, test_csr = split_train_val_test_users(interactions_csr, cfg["val_user_ratio"], cfg["test_user_ratio"], cfg["seed"])
+    return interactions_df, train_csr, val_csr, test_csr
 
 
 def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: float, seed: int) -> tuple[sp.csr_matrix, sp.csr_matrix]:

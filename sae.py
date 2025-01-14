@@ -26,7 +26,7 @@ class SAE(nn.Module):
     def total_loss(self, partial_losses: dict) -> torch.Tensor:
         raise NotImplementedError
 
-    def compute_loss_dict(self, x: torch.Tensor, e_pre: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
+    def _compute_loss_dict(self, x: torch.Tensor, e_pre: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
         losses = {
             "L2": (x_out - x).pow(2).mean(),
             "L1": e.abs().sum(-1).mean(),
@@ -64,14 +64,17 @@ class SAE(nn.Module):
     def destandardize_output(self, out: torch.Tensor, x_mean: torch.Tensor, x_std: torch.Tensor) -> torch.Tensor:
         return x_mean + out * x_std
 
-    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> dict:
+    def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
         out, e, e_pre, batch_mean, batch_std = self(batch)
-        losses = self.compute_loss_dict(batch, e_pre, e, out)
+        return self._compute_loss_dict(batch, e_pre, e, out)
+
+    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> dict[str, torch.Tensor]:
+        losses = self.compute_loss_dict(batch)
         optimizer.zero_grad()
         losses["Loss"].backward()
         self.normalize_decoder()
         optimizer.step()
-        return {k: v.item() for k, v in losses.items()}
+        return losses
 
 
 class BasicSAE(SAE):
