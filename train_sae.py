@@ -19,7 +19,7 @@ def train_sae(cfg: dict, device: torch.device):
     pretrained_model_cfg = load_config_from_checkpoint(pretrained_model_checkpoint)
     print(f"Source model config: {pretrained_model_cfg}")
 
-    _, train_csr, val_csr, _ = prepare_interaction_data(pretrained_model_cfg)
+    _, train_csr, val_csr, _, _, _, _, _ = prepare_interaction_data(pretrained_model_cfg)
     train_interaction_dataloader = Dataloader(train_csr, pretrained_model_cfg["batch_size"], device, pretrained_model_cfg["seed"])
     val_interaction_dataloader = Dataloader(val_csr, pretrained_model_cfg["batch_size"], device)
 

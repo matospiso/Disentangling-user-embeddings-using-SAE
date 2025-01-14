@@ -11,9 +11,7 @@ from util import get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, 
 def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
     recall = []
     for input_batch, target_batch in zip(inputs, targets):
-        scores = model(input_batch)
-        scores = torch.where(input_batch != 0, 0, scores)  # mask input interactions
-        topk_scores, topk_indices = torch.topk(scores, k)
+        topk_scores, topk_indices = model.recommend(input_batch, k, mask_interactions=True)
         target_batch = target_batch.bool()
         predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
         r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
@@ -24,14 +22,14 @@ def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int)
 def train_elsa(cfg: dict, device: torch.device):
     print(f"Training ELSA model using config {cfg}")
 
-    _, train_csr, val_csr, _ = prepare_interaction_data(cfg)
+    _, train_csr, val_csr, _, _, _, _, _  = prepare_interaction_data(cfg)
     train_dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     model = model_class(train_csr.shape[1], cfg["embedding_dim"], cfg["seed"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
-    
+
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
     load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)

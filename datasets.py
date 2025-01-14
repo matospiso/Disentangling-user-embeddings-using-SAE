@@ -24,36 +24,48 @@ def load_interactions_dataframe(dataset_name: str) -> pl.DataFrame:
     return interactions_df
 
 
-def convert_to_csr(interactions_df: pl.DataFrame) -> sp.csr_matrix:
-    return sp.csr_matrix(
-        (
-            np.ones(len(interactions_df), dtype=np.float32),
-            (interactions_df["user_id"].to_physical().to_numpy(), interactions_df["item_id"].to_physical().to_numpy()),
+def convert_to_csr(interactions_df: pl.DataFrame) -> tuple[sp.csr_matrix, np.ndarray, np.ndarray]:
+    return (
+        sp.csr_matrix(
+            (
+                np.ones(len(interactions_df), dtype=np.float32),
+                (interactions_df["user_id"].to_physical().to_numpy(), interactions_df["item_id"].to_physical().to_numpy()),
+            ),
+            shape=(interactions_df["user_id"].n_unique(), interactions_df["item_id"].n_unique()),
         ),
-        shape=(interactions_df["user_id"].n_unique(), interactions_df["item_id"].n_unique()),
+        interactions_df["user_id"].cat.get_categories().to_numpy(),
+        interactions_df["item_id"].cat.get_categories().to_numpy(),
     )
 
 
 def split_train_val_test_users(
-    user_item_csr: sp.csr_matrix, val_ratio: float, test_ratio: float, seed: int
-) -> tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]:
+    users, user_item_csr: sp.csr_matrix, val_ratio: float, test_ratio: float, seed: int
+) -> tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     p = rng.permutation(user_item_csr.shape[0])
-    train = user_item_csr[p[: int(-(val_ratio + test_ratio) * len(p))]]
-    val = user_item_csr[p[int(-(val_ratio + test_ratio) * len(p)) : int(-test_ratio * len(p))]]
-    test = user_item_csr[p[int(-test_ratio * len(p)) :]]
-    print(f"Train split info: users={train.shape[0]}, items={train.shape[1]}, interactions={train.nnz}")
-    print(f"Val split info: users={val.shape[0]}, items={val.shape[1]}, interactions={val.nnz}")
-    print(f"Test split info: users={test.shape[0]}, items={test.shape[1]}, interactions={test.nnz}")
-    return train, val, test
+    train_user_idxs = p[: int(-(val_ratio + test_ratio) * len(p))]
+    val_user_idxs = p[int(-(val_ratio + test_ratio) * len(p)) : int(-test_ratio * len(p))]
+    test_user_idxs = p[int(-test_ratio * len(p)) :]
+    train_csr, val_csr, test_csr = user_item_csr[train_user_idxs], user_item_csr[val_user_idxs], user_item_csr[test_user_idxs]
+    train_users, val_users, test_users = users[train_user_idxs], users[val_user_idxs], users[test_user_idxs]
+    print(f"Train split info: users={train_csr.shape[0]}, items={train_csr.shape[1]}, interactions={train_csr.nnz}")
+    print(f"Val split info: users={val_csr.shape[0]}, items={val_csr.shape[1]}, interactions={val_csr.nnz}")
+    print(f"Test split info: users={test_csr.shape[0]}, items={test_csr.shape[1]}, interactions={test_csr.nnz}")
+    return train_csr, val_csr, test_csr, train_users, val_users, test_users
 
 
-def prepare_interaction_data(cfg: dict) -> tuple[pl.DataFrame, sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]:
+def prepare_interaction_data(cfg: dict) -> tuple[pl.DataFrame, sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     dataset = cfg["dataset"]
     interactions_df = load_interactions_dataframe(dataset)
-    interactions_csr = convert_to_csr(interactions_df)
-    train_csr, val_csr, test_csr = split_train_val_test_users(interactions_csr, cfg["val_user_ratio"], cfg["test_user_ratio"], cfg["seed"])
-    return interactions_df, train_csr, val_csr, test_csr
+    interactions_csr, users, items = convert_to_csr(interactions_df)
+    train_csr, val_csr, test_csr, train_users, val_users, test_users = split_train_val_test_users(
+        users,
+        interactions_csr,
+        cfg["val_user_ratio"],
+        cfg["test_user_ratio"],
+        cfg["seed"],
+    )
+    return interactions_df, train_csr, val_csr, test_csr, train_users, val_users, test_users, items
 
 
 def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: float, seed: int) -> tuple[sp.csr_matrix, sp.csr_matrix]:

@@ -45,3 +45,11 @@ class ELSA(nn.Module):
         self.normalize_encoder()
         optimizer.step()
         return losses
+
+    @torch.no_grad()
+    def recommend(self, interaction_batch: torch.Tensor, k: int, mask_interactions: bool = True) -> tuple[torch.Tensor, torch.Tensor]:
+        scores = self(interaction_batch)
+        if mask_interactions:
+            scores = torch.where(interaction_batch != 0, 0, scores)  # mask input interactions
+        topk_scores, topk_indices = torch.topk(scores, k)
+        return topk_scores.cpu().numpy(), topk_indices.cpu().numpy()
