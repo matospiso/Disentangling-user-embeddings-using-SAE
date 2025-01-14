@@ -53,11 +53,17 @@ class BasicSAE(SAE):
         self.l1_coef = extra_params["l1_coef"]
 
     def compute_losses(self, x: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
+        l2_loss = (x_out - x).pow(2).mean()
         l1_loss = e.abs().sum(-1).mean()
         l0_loss = (e > 0).float().sum(-1).mean()
         loss = l2_loss + self.l1_coef * l1_loss
         return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        return F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
+
+    def decode(self, e: torch.Tensor) -> torch.Tensor:
+        return e @ self.decoder_w + self.decoder_b
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         x, x_mean, x_std = self.standardize_input(x)
@@ -75,15 +81,23 @@ class TopKSAE(SAE):
         self.k = extra_params["k"]
 
     def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
+        l2_loss = (x_out - x).pow(2).mean()
         l1_loss = e_topk.abs().sum(-1).mean()
         l0_loss = (e_topk > 0).float().sum(-1).mean()
         loss = l2_loss + self.l1_coef * l1_loss
         return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
 
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
+        e_topk = torch.topk(e, self.k, dim=-1)
+        return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
+
+    def decode(self, e: torch.Tensor) -> torch.Tensor:
+        return e @ self.decoder_w + self.decoder_b
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         x, x_mean, x_std = self.standardize_input(x)
-        e = (x - self.decoder_b) @ self.encoder_w + self.encoder_b
+        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
         e_topk = torch.topk(e, self.k, dim=-1)
         e_topk = torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
         x_out = e_topk @ self.decoder_w + self.decoder_b
@@ -99,15 +113,24 @@ class BatchTopKSAE(SAE):
         self.k = extra_params["k"]
 
     def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).sum(-1).sqrt().div(x.norm(dim=-1)).mean()
+        l2_loss = (x_out - x).pow(2).mean()
         l1_loss = e_topk.abs().sum(-1).mean()
         l0_loss = (e_topk > 0).float().sum(-1).mean()
         loss = l2_loss + self.l1_coef * l1_loss
         return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
 
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        # TODO inference activation
+        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
+        e_topk = torch.topk(e, self.k, dim=-1)
+        return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
+
+    def decode(self, e: torch.Tensor) -> torch.Tensor:
+        return e @ self.decoder_w + self.decoder_b
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         x, x_mean, x_std = self.standardize_input(x)
-        e = (x - self.decoder_b) @ self.encoder_w + self.encoder_b
+        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
         e_topk = torch.topk(e.flatten(), self.k * e.shape[0], dim=-1)
         e_topk = torch.zeros_like(e.flatten()).scatter(-1, e_topk.indices, e_topk.values).reshape(e.shape)
         x_out = e_topk @ self.decoder_w + self.decoder_b
