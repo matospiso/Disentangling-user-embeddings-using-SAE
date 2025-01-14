@@ -19,8 +19,34 @@ class SAE(nn.Module):
         self.normalize_decoder()
 
     @abstractmethod
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
+    def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
+
+    @abstractmethod
+    def total_loss(self, partial_losses: dict) -> torch.Tensor:
+        raise NotImplementedError
+
+    def compute_loss_dict(self, x: torch.Tensor, e_pre: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
+        losses = {
+            "L2": (x_out - x).pow(2).mean(),
+            "L1": e.abs().sum(-1).mean(),
+            "L0": (e > 0).float().sum(-1).mean(),
+        }
+        losses["Loss"] = self.total_loss(losses)
+        return losses
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        x, x_mean, x_std = self.standardize_input(x)
+        e_pre = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
+        return self.post_process_embedding(e_pre), e_pre, x_mean, x_std
+
+    def decode(self, e: torch.Tensor, x_mean: torch.Tensor, x_std: torch.Tensor) -> torch.Tensor:
+        return self.destandardize_output(e @ self.decoder_w + self.decoder_b, x_mean, x_std)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        e, e_pre, x_mean, x_std = self.encode(x)
+        out = self.decode(e, x_mean, x_std)
+        return out, e, e_pre, x_mean, x_std
 
     @torch.no_grad()
     def normalize_decoder(self) -> None:
@@ -31,15 +57,16 @@ class SAE(nn.Module):
     def standardize_input(self, x: torch.Tensor) -> torch.Tensor:
         x_mean = x.mean(dim=-1, keepdim=True)
         x -= x_mean
-        x_std = x.std(dim=-1, keepdim=True)
-        x /= x_std + 1e-7
+        x_std = x.std(dim=-1, keepdim=True) + 1e-7
+        x /= x_std
         return x, x_mean, x_std
 
-    def destandardize_output(self, x: torch.Tensor, x_mean: torch.Tensor, x_std: torch.Tensor) -> torch.Tensor:
-        return x_mean + x * x_std
+    def destandardize_output(self, out: torch.Tensor, x_mean: torch.Tensor, x_std: torch.Tensor) -> torch.Tensor:
+        return x_mean + out * x_std
 
-    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> float:
-        _, losses = self(batch)
+    def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> dict:
+        out, e, e_pre, batch_mean, batch_std = self(batch)
+        losses = self.compute_loss_dict(batch, e_pre, e, out)
         optimizer.zero_grad()
         losses["Loss"].backward()
         self.normalize_decoder()
@@ -52,26 +79,11 @@ class BasicSAE(SAE):
         super().__init__(input_dim, embedding_dim, seed)
         self.l1_coef = extra_params["l1_coef"]
 
-    def compute_losses(self, x: torch.Tensor, e: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).mean()
-        l1_loss = e.abs().sum(-1).mean()
-        l0_loss = (e > 0).float().sum(-1).mean()
-        loss = l2_loss + self.l1_coef * l1_loss
-        return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
+    def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
+        return e
 
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
-        return F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
-
-    def decode(self, e: torch.Tensor) -> torch.Tensor:
-        return e @ self.decoder_w + self.decoder_b
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
-        x, x_mean, x_std = self.standardize_input(x)
-        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
-        x_out = e @ self.decoder_w + self.decoder_b
-        if not self.training:
-            return self.destandardize_output(x_out, x_mean, x_std), None
-        return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, x_out)
+    def total_loss(self, partial_losses: dict) -> torch.Tensor:
+        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
 
 
 class TopKSAE(SAE):
@@ -80,30 +92,13 @@ class TopKSAE(SAE):
         self.l1_coef = extra_params["l1_coef"]
         self.k = extra_params["k"]
 
-    def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).mean()
-        l1_loss = e_topk.abs().sum(-1).mean()
-        l0_loss = (e_topk > 0).float().sum(-1).mean()
-        loss = l2_loss + self.l1_coef * l1_loss
-        return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
-
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
-        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
+    def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
         e_topk = torch.topk(e, self.k, dim=-1)
         return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
 
-    def decode(self, e: torch.Tensor) -> torch.Tensor:
-        return e @ self.decoder_w + self.decoder_b
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
-        x, x_mean, x_std = self.standardize_input(x)
-        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
-        e_topk = torch.topk(e, self.k, dim=-1)
-        e_topk = torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
-        x_out = e_topk @ self.decoder_w + self.decoder_b
-        if not self.training:
-            return self.destandardize_output(x_out, x_mean, x_std), None
-        return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, e_topk, x_out)
+    def total_loss(self, partial_losses: dict) -> torch.Tensor:
+        # TODO
+        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
 
 
 class BatchTopKSAE(SAE):
@@ -112,28 +107,11 @@ class BatchTopKSAE(SAE):
         self.l1_coef = extra_params["l1_coef"]
         self.k = extra_params["k"]
 
-    def compute_losses(self, x: torch.Tensor, e: torch.Tensor, e_topk: torch.Tensor, x_out: torch.Tensor) -> dict:
-        l2_loss = (x_out - x).pow(2).mean()
-        l1_loss = e_topk.abs().sum(-1).mean()
-        l0_loss = (e_topk > 0).float().sum(-1).mean()
-        loss = l2_loss + self.l1_coef * l1_loss
-        return {"Loss": loss, "L2": l2_loss, "L1": l1_loss, "L0": l0_loss}
-
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
+    def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
         # TODO inference activation
-        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
-        e_topk = torch.topk(e, self.k, dim=-1)
-        return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
-
-    def decode(self, e: torch.Tensor) -> torch.Tensor:
-        return e @ self.decoder_w + self.decoder_b
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
-        x, x_mean, x_std = self.standardize_input(x)
-        e = F.relu((x - self.decoder_b) @ self.encoder_w + self.encoder_b)
         e_topk = torch.topk(e.flatten(), self.k * e.shape[0], dim=-1)
-        e_topk = torch.zeros_like(e.flatten()).scatter(-1, e_topk.indices, e_topk.values).reshape(e.shape)
-        x_out = e_topk @ self.decoder_w + self.decoder_b
-        if not self.training:
-            return self.destandardize_output(x_out, x_mean, x_std), None
-        return self.destandardize_output(x_out, x_mean, x_std), self.compute_losses(x, e, e_topk, x_out)
+        return torch.zeros_like(e.flatten()).scatter(-1, e_topk.indices, e_topk.values).reshape(e.shape)
+
+    def total_loss(self, partial_losses: dict) -> torch.Tensor:
+        # TODO
+        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
