@@ -36,7 +36,7 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, jo
 
 
 def load_config_from_checkpoint(filepath: str) -> dict:
-    return torch.load(filepath, weights_only=False)["job_cfg"]
+    return torch.load(filepath, weights_only=False, map_location=torch.device("cpu"))["job_cfg"]
 
 
 def load_checkpoint(
