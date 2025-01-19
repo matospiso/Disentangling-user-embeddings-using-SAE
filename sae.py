@@ -102,19 +102,3 @@ class TopKSAE(SAE):
     def total_loss(self, partial_losses: dict) -> torch.Tensor:
         # TODO
         return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
-
-
-class BatchTopKSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
-        super().__init__(input_dim, embedding_dim, seed)
-        self.l1_coef = extra_params["l1_coef"]
-        self.k = extra_params["k"]
-
-    def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
-        # TODO inference activation
-        e_topk = torch.topk(e.flatten(), self.k * e.shape[0], dim=-1)
-        return torch.zeros_like(e.flatten()).scatter(-1, e_topk.indices, e_topk.values).reshape(e.shape)
-
-    def total_loss(self, partial_losses: dict) -> torch.Tensor:
-        # TODO
-        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
