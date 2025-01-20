@@ -12,6 +12,7 @@ def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int)
     recall = []
     for input_batch, target_batch in zip(inputs, targets):
         topk_scores, topk_indices = model.recommend(input_batch, k, mask_interactions=True)
+        topk_indices = torch.tensor(topk_indices, device=target_batch.device)
         target_batch = target_batch.bool()
         predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
         r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
@@ -22,7 +23,7 @@ def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int)
 def train_elsa(cfg: dict, device: torch.device):
     print(f"Training ELSA model using config {cfg}")
 
-    _, train_csr, val_csr, _, _, _, _, _  = prepare_interaction_data(cfg)
+    _, train_csr, val_csr, _, _, _, _, _ = prepare_interaction_data(cfg)
     train_dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
