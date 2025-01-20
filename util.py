@@ -1,6 +1,7 @@
 from hashlib import sha256
 import json
 import os
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -75,6 +76,7 @@ def run_training_loop(
         print("No checkpoint found, starting from scratch.")
         start_epoch = 0
     best_loss, epochs_without_improvement = float("inf"), 0
+    start_time = time.perf_counter()
     for epoch in range(start_epoch, cfg["epochs"]):
         model.train()
         pbar = tqdm(train_dataloader)
@@ -98,3 +100,4 @@ def run_training_loop(
         if epochs_without_improvement >= cfg["early_stopping"]:
             print("Reached early stopping condition, terminating training.")
             break
+    print(f"Training loop for {get_checkpoint_name(cfg)} took {time.perf_counter() - start_time:.4f} seconds.")
