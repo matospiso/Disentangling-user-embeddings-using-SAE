@@ -39,7 +39,7 @@ def train_elsa(cfg: dict, device: torch.device):
     eval_results = evaluate_recall_at_k(
         model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"], device), cfg["eval_topk"]
     )
-    print(f"Model={get_checkpoint_name(cfg)}: recall@{cfg['eval_topk']}={np.mean(eval_results):.4f}+-{np.std(eval_results) / np.sqrt(len(eval_results)):.4f}")
+    print(f"Model = {get_checkpoint_name(cfg)} | Recall @ {cfg['eval_topk']} = {np.mean(eval_results):.4f} +- {np.std(eval_results) / np.sqrt(len(eval_results)):.4f}")
 
 
 if __name__ == "__main__":
