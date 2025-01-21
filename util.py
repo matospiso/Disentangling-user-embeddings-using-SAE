@@ -121,5 +121,4 @@ def evaluate_cosine_similarity(model, inputs: Dataloader) -> np.ndarray:
     for input_batch in inputs:
         output_batch = model(input_batch)[0]
         cosine.append(nn.functional.cosine_similarity(input_batch, output_batch, 1))
-    print(torch.cat(cosine).detach().cpu().numpy().shape)
     return torch.cat(cosine).detach().cpu().numpy()
