@@ -100,5 +100,4 @@ class TopKSAE(SAE):
         return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
 
     def total_loss(self, partial_losses: dict) -> torch.Tensor:
-        # TODO
         return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
