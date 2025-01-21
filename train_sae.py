@@ -1,12 +1,22 @@
 import argparse
+from copy import deepcopy
 import importlib
 import numpy as np
 import torch
 import torch.optim as optim
 from tqdm import tqdm
 
-from datasets import Dataloader, prepare_interaction_data
-from util import CHECKPOINT_FOLDER, load_config_from_checkpoint, run_training_loop, load_checkpoint
+from datasets import Dataloader, prepare_interaction_data, split_input_target_interactions
+from util import (
+    CHECKPOINT_FOLDER,
+    evaluate_cosine_similarity,
+    evaluate_recall_at_k,
+    get_checkpoint_filepath,
+    get_checkpoint_name,
+    load_config_from_checkpoint,
+    run_training_loop,
+    load_checkpoint,
+)
 
 
 def train_sae(cfg: dict, device: torch.device):
@@ -46,7 +56,41 @@ def train_sae(cfg: dict, device: torch.device):
 
     run_training_loop(sae_model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
-    # TODO load last checkpoint and compute metrics on validation split (1. reconstruction quality (normalized MSE) 2. sparsity (L0), 3. relative recommendation quality degradation)
+    load_checkpoint(sae_model, None, get_checkpoint_filepath(cfg), device, cfg)
+
+    # Evaluation 1: cosine similarity between SAE inputs and SAE outputs
+    sae_model.eval()
+    cosine_similarity_results = evaluate_cosine_similarity(sae_model, val_dataloader)
+    print(
+        f"Model = {get_checkpoint_name(cfg)} | Cosine similarity = {np.mean(cosine_similarity_results):.6f} +- {np.std(cosine_similarity_results) / np.sqrt(len(cosine_similarity_results)):.6f}"
+    )
+
+    # Evaluation 2: degradation in Recall @ k ( disentangled model (=with SAE inserted) vs unmodified pretrained model )
+    val_inputs, val_targets = split_input_target_interactions(val_csr, pretrained_model_cfg["target_interaction_ratio"], pretrained_model_cfg["seed"])
+    pretrained_model.eval()
+    pretrained_model_recall_results = evaluate_recall_at_k(
+        pretrained_model,
+        Dataloader(val_inputs, pretrained_model_cfg["batch_size"], device),
+        Dataloader(val_targets, pretrained_model_cfg["batch_size"], device),
+        pretrained_model_cfg["eval_topk"],
+    )
+
+    def forward_with_sae(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decode(sae_model(self.encode(x))[0]) - x
+
+    disentangled_model = deepcopy(pretrained_model)
+    disentangled_model.forward = forward_with_sae.__get__(disentangled_model, disentangled_model.__class__)
+    disentangled_model.eval()
+    disentangled_model_recall_results = evaluate_recall_at_k(
+        disentangled_model,
+        Dataloader(val_inputs, pretrained_model_cfg["batch_size"], device),
+        Dataloader(val_targets, pretrained_model_cfg["batch_size"], device),
+        pretrained_model_cfg["eval_topk"],
+    )
+    recall_degradations = disentangled_model_recall_results - pretrained_model_recall_results
+    print(
+        f"Model = {get_checkpoint_name(cfg)} | Recall @ {pretrained_model_cfg['eval_topk']} degradation = {np.mean(recall_degradations):.6f} +- {np.std(recall_degradations) / np.sqrt(len(recall_degradations)):.6f}"
+    )
 
 
 if __name__ == "__main__":

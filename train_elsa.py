@@ -5,19 +5,7 @@ import torch
 import torch.optim as optim
 
 from datasets import Dataloader, prepare_interaction_data, split_input_target_interactions
-from util import get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, run_training_loop
-
-
-def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
-    recall = []
-    for input_batch, target_batch in zip(inputs, targets):
-        topk_scores, topk_indices = model.recommend(input_batch, k, mask_interactions=True)
-        topk_indices = torch.tensor(topk_indices, device=target_batch.device)
-        target_batch = target_batch.bool()
-        predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
-        r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
-        recall.append(r)
-    return torch.cat(recall).detach().cpu().numpy()
+from util import evaluate_recall_at_k, get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, run_training_loop
 
 
 def train_elsa(cfg: dict, device: torch.device):
@@ -39,7 +27,9 @@ def train_elsa(cfg: dict, device: torch.device):
     eval_results = evaluate_recall_at_k(
         model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"], device), cfg["eval_topk"]
     )
-    print(f"Model = {get_checkpoint_name(cfg)} | Recall @ {cfg['eval_topk']} = {np.mean(eval_results):.4f} +- {np.std(eval_results) / np.sqrt(len(eval_results)):.4f}")
+    print(
+        f"Model = {get_checkpoint_name(cfg)} | Recall @ {cfg['eval_topk']} = {np.mean(eval_results):.6f} +- {np.std(eval_results) / np.sqrt(len(eval_results)):.6f}"
+    )
 
 
 if __name__ == "__main__":

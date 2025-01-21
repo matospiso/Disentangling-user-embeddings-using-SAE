@@ -1,5 +1,6 @@
 from hashlib import sha256
 import json
+import numpy as np
 import os
 import time
 import torch
@@ -101,3 +102,24 @@ def run_training_loop(
             print("Reached early stopping condition, terminating training.")
             break
     print(f"Training loop for {get_checkpoint_name(cfg)} took {time.perf_counter() - start_time:.4f} seconds.")
+
+
+def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
+    recall = []
+    for input_batch, target_batch in zip(inputs, targets):
+        topk_scores, topk_indices = model.recommend(input_batch, k, mask_interactions=True)
+        topk_indices = torch.tensor(topk_indices, device=target_batch.device)
+        target_batch = target_batch.bool()
+        predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
+        r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
+        recall.append(r)
+    return torch.cat(recall).detach().cpu().numpy()
+
+
+def evaluate_cosine_similarity(model, inputs: Dataloader) -> np.ndarray:
+    cosine = []
+    for input_batch in inputs:
+        output_batch = model(input_batch)[0]
+        cosine.append(nn.functional.cosine_similarity(input_batch, output_batch, 1))
+    print(torch.cat(cosine).detach().cpu().numpy().shape)
+    return torch.cat(cosine).detach().cpu().numpy()
