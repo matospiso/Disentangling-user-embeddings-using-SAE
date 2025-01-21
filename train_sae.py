@@ -9,9 +9,6 @@ from datasets import Dataloader, prepare_interaction_data
 from util import CHECKPOINT_FOLDER, load_config_from_checkpoint, run_training_loop, load_checkpoint
 
 
-SAE_EXTRA_PARAMS = ["l1_coef", "k"]
-
-
 def train_sae(cfg: dict, device: torch.device):
     print(f"Training sparse autoencoder using config {cfg}")
 
@@ -43,8 +40,8 @@ def train_sae(cfg: dict, device: torch.device):
     train_dataloader = Dataloader(train_user_embeddings, cfg["batch_size"], device, cfg["seed"])
     val_dataloader = Dataloader(val_user_embeddings, cfg["batch_size"], device)
     sae_model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    extra_params = {k: cfg[k] for k in cfg.keys() if k in SAE_EXTRA_PARAMS}
-    sae_model = sae_model_class(train_user_embeddings.shape[1], cfg["embedding_dim"], cfg["seed"], **extra_params).to(device)
+    sae_extra_params = {k: cfg[k] for k in cfg.keys() if k in ["l1_coef", "k"]}
+    sae_model = sae_model_class(train_user_embeddings.shape[1], cfg["embedding_dim"], cfg["seed"], **sae_extra_params).to(device)
     optimizer = optim.Adam(sae_model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     run_training_loop(sae_model, optimizer, train_dataloader, val_dataloader, cfg, device)
