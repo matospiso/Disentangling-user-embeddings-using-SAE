@@ -1,11 +1,8 @@
 #!/bin/bash
-mkdir -p logs
-
 echo "Training ELSA models..."
 for embedding_dim in 512 1024 2048; do
     python train_elsa.py --dataset ml-25m --embedding_dim "$embedding_dim" --lr 3e-4 --epochs 50
 done
-
 echo "Training SAE models for individual ELSA checkpoints..."
 for checkpoint_file in checkpoints/ml-25m/*; do
     checkpoint=$(basename "$checkpoint_file")
