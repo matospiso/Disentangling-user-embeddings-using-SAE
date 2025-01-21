@@ -14,11 +14,11 @@ for checkpoint_file in checkpoints/ml-25m/*; do
             elsa_embedding_dim=$(echo "$checkpoint" | cut -d'-' -f2)
             sae_embedding_dim=$((elsa_embedding_dim * scaling_factor))
             if [[ "$sae_class" == "BasicSAE" ]]; then
-                for l1_coef in 0.005 0.002 0.001; do
+                for l1_coef in 0.01 0.005 0.002 0.001; do
                     python train_sae.py --dataset ml-25m --pretrained_model_checkpoint "$checkpoint" --model_class "$sae_class" --embedding_dim "$sae_embedding_dim" --lr 3e-4 --l1_coef "$l1_coef" --epochs 500 --early_stopping 50 2> >(cat >&2) | tee -a "$log_file"
                 done
             elif [[ "$sae_class" == "TopKSAE" ]]; then
-                for k in 16 32 64; do
+                for k in 8 16 32 64; do
                     python train_sae.py --dataset ml-25m --pretrained_model_checkpoint "$checkpoint" --model_class "$sae_class" --embedding_dim "$sae_embedding_dim" --lr 3e-4 --l1_coef 0.001 --k "$k" --epochs 500 --early_stopping 50 2> >(cat >&2) | tee -a "$log_file"
                 done
             fi
