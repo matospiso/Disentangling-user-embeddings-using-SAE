@@ -3,7 +3,7 @@
 ## Setup
 ### Environment
 ```bash
-conda create -y -n sae python==3.11
+conda create -y -n sae python=3.11
 conda activate sae
 
 pip install -r requirements.txt
