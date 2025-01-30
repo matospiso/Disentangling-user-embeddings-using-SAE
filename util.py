@@ -116,7 +116,8 @@ def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int)
         topk_indices = torch.tensor(topk_indices, device=target_batch.device)
         target_batch = target_batch.bool()
         predicted_batch = torch.zeros_like(target_batch).scatter_(1, topk_indices, torch.ones_like(topk_indices, dtype=bool))
-        r = (predicted_batch & target_batch).sum(axis=1) / target_batch.sum(axis=1)
+        # recall formula from https://arxiv.org/pdf/1802.05814
+        r = (predicted_batch & target_batch).sum(axis=1) / torch.minimum(target_batch.sum(axis=1), torch.ones_like(target_batch.sum(axis=1)) * k)
         recall.append(r)
     return torch.cat(recall).detach().cpu().numpy()
 
