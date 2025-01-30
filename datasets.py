@@ -4,21 +4,55 @@ import scipy.sparse as sp
 import torch
 
 DATA_FOLDER = "data"
-DATASET_RATING_FILE = {
-    "ml-25m": "ratings.csv",
-}
 
 
 def load_interactions_dataframe(dataset_name: str) -> pl.DataFrame:
-    interactions_df = pl.scan_csv(f"{DATA_FOLDER}/{dataset_name}/{DATASET_RATING_FILE[dataset_name]}")
-    if dataset_name == "ml-25m":
-        interactions_df = interactions_df.rename({"userId": "user_id", "movieId": "item_id", "rating": "value"})
-    interactions_df = (
-        interactions_df.select(["user_id", "item_id", "value"])
-        .filter(pl.col("value") >= 4.0)
-        .cast({"user_id": pl.String, "item_id": pl.String, "value": pl.Float32})
-        .cast({"user_id": pl.Categorical, "item_id": pl.Categorical})
-        .collect()
+    if dataset_name == "ML-25M":
+        interactions_df = (
+            pl.scan_csv(f"{DATA_FOLDER}/{dataset_name}/ratings.csv")
+            .rename({"userId": "user_id", "movieId": "item_id", "rating": "value"})
+            .select(["user_id", "item_id", "value"])
+            .filter(pl.col("value") >= 4.0)
+            .collect()
+        )
+        print("Removing users with < 5 interactions...")
+        interactions_df = interactions_df.filter(
+            interactions_df["user_id"].is_in(interactions_df["user_id"].value_counts().filter(pl.col("count") >= 5)["user_id"])
+        )
+    elif dataset_name == "MSD":
+        # follows MultVAE paper (https://arxiv.org/pdf/1802.05814)
+        interactions_df = (
+            pl.scan_csv(f"{DATA_FOLDER}/{dataset_name}.txt", has_header=False, separator="\t")
+            .rename({"column_1": "user_id", "column_2": "item_id", "column_3": "value"})
+            .with_columns(pl.col("value").pow(0).alias("value"))
+            .collect()
+        )
+        print("Removing items with < 200 interactions...")
+        interactions_df = interactions_df.filter(
+            interactions_df["item_id"].is_in(interactions_df["item_id"].value_counts().filter(pl.col("count") >= 200)["item_id"])
+        )
+        print("Removing users with < 20 interactions...")
+        interactions_df = interactions_df.filter(
+            interactions_df["user_id"].is_in(interactions_df["user_id"].value_counts().filter(pl.col("count") >= 20)["user_id"])
+        )
+    elif dataset_name == "Electronics":
+        interactions_df = (
+            pl.scan_ndjson(f"{DATA_FOLDER}/{dataset_name}.json")
+            .rename({"reviewerID": "user_id", "asin": "item_id", "overall": "value"})
+            .select(["user_id", "item_id", "value"])
+            .filter(pl.col("value") >= 4.0)
+            .collect()
+        )
+        print("Removing items with < 25 interactions...")
+        interactions_df = interactions_df.filter(
+            interactions_df["item_id"].is_in(interactions_df["item_id"].value_counts().filter(pl.col("count") >= 25)["item_id"])
+        )
+        print("Removing users with < 5 interactions...")
+        interactions_df = interactions_df.filter(
+            interactions_df["user_id"].is_in(interactions_df["user_id"].value_counts().filter(pl.col("count") >= 5)["user_id"])
+        )
+    interactions_df = interactions_df.cast({"user_id": pl.String, "item_id": pl.String, "value": pl.Float32}).cast(
+        {"user_id": pl.Categorical, "item_id": pl.Categorical}
     )
     print(f"Dataset info: users={interactions_df['user_id'].n_unique()}, items={interactions_df['item_id'].n_unique()}, interactions={len(interactions_df)}")
     return interactions_df
