@@ -76,6 +76,9 @@ def run_training_loop(
     except FileNotFoundError:
         print("No checkpoint found, starting from scratch.")
         start_epoch = 0
+    if start_epoch == cfg["epochs"]:
+        print(f"Checkpoint already trained for {cfg['epochs']} of {cfg['epochs']} epochs, training is complete.")
+        return None
     best_loss, epochs_without_improvement = float("inf"), 0
     start_time = time.perf_counter()
     for epoch in range(start_epoch, cfg["epochs"]):
@@ -95,12 +98,14 @@ def run_training_loop(
                 pbar.set_postfix_str(pbar.postfix + " | Val: " + ", ".join([f"{k}={v:.3f}" for k, v in val_losses.items()]))
         if val_losses["Loss"] < best_loss:
             best_loss, epochs_without_improvement = val_losses["Loss"], 0
-            save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
         else:
             epochs_without_improvement += 1
+        if (epoch + 1) % 50 == 0:
+            save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
         if epochs_without_improvement >= cfg["early_stopping"]:
             print("Reached early stopping condition, terminating training.")
             break
+    save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
     print(f"Training loop for {get_checkpoint_name(cfg)} took {time.perf_counter() - start_time:.4f} seconds.")
 
 
