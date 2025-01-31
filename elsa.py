@@ -33,7 +33,7 @@ class ELSA(nn.Module):
         return e @ self.encoder.T
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decode(self.encode(x)) - x
+        return nn.ReLU()(self.decode(self.encode(x)) - x)
 
     def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
         return {"Loss": normalized_mse_loss(self(batch), batch)}
