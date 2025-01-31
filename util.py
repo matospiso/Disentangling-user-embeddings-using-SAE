@@ -1,5 +1,6 @@
 from hashlib import sha256
 import json
+import random
 import numpy as np
 import os
 import time
@@ -11,6 +12,15 @@ from tqdm import tqdm
 from datasets import Dataloader
 
 CHECKPOINT_FOLDER = "checkpoints"
+
+
+def set_seed(seed: int) -> None:
+    torch.manual_seed(seed)  # CPU seed
+    torch.mps.manual_seed(seed)  # Metal seed
+    torch.cuda.manual_seed(seed)  # GPU seed
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)  # NumPy seed
+    random.seed(seed)  # Python seed
 
 
 def hash_dict(d: dict, length: int = 8) -> str:
