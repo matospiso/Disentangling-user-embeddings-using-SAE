@@ -8,10 +8,11 @@ from util import l2_normalize
 
 
 class SAE(nn.Module):
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int):
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int):
         super().__init__()
         rng = torch.Generator()
         rng.manual_seed(seed)
+        self.reconstruction_loss = reconstruction_loss
         self.encoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
         self.encoder_b = nn.Parameter(torch.zeros(embedding_dim))
         self.decoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([embedding_dim, input_dim]), generator=rng))
@@ -31,6 +32,7 @@ class SAE(nn.Module):
             "L2": (x_out - x).pow(2).mean(),
             "L1": e.abs().sum(-1).mean(),
             "L0": (e > 0).float().sum(-1).mean(),
+            "Cosine": (1 - F.cosine_similarity(x, x_out, 1)).mean(),
         }
         losses["Loss"] = self.total_loss(losses)
         return losses
@@ -78,20 +80,20 @@ class SAE(nn.Module):
 
 
 class BasicSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
-        super().__init__(input_dim, embedding_dim, seed)
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, reconstruction_loss, seed)
         self.l1_coef = extra_params["l1_coef"]
 
     def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
         return e
 
     def total_loss(self, partial_losses: dict) -> torch.Tensor:
-        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
+        return partial_losses[self.reconstruction_loss] + self.l1_coef * partial_losses["L1"]
 
 
 class TopKSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int, **extra_params: dict):
-        super().__init__(input_dim, embedding_dim, seed)
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, reconstruction_loss, seed)
         self.l1_coef = extra_params["l1_coef"]
         self.k = extra_params["k"]
 
@@ -100,4 +102,4 @@ class TopKSAE(SAE):
         return torch.zeros_like(e).scatter(-1, e_topk.indices, e_topk.values)
 
     def total_loss(self, partial_losses: dict) -> torch.Tensor:
-        return partial_losses["L2"] + self.l1_coef * partial_losses["L1"]
+        return partial_losses[self.reconstruction_loss] + self.l1_coef * partial_losses["L1"]
