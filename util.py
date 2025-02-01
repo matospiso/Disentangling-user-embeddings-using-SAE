@@ -132,6 +132,28 @@ def evaluate_recall_at_k(model, inputs: Dataloader, targets: Dataloader, k: int)
     return torch.cat(recall).detach().cpu().numpy()
 
 
+def evaluate_ndcg_at_k(model, inputs: Dataloader, targets: Dataloader, k: int) -> np.ndarray:
+    ndcg = []
+    for input_batch, target_batch in zip(inputs, targets):
+        topk_scores, topk_indices = model.recommend(input_batch, k, mask_interactions=True)
+        topk_indices = torch.tensor(topk_indices, device=target_batch.device)
+        target_batch = target_batch.bool()
+        relevance = target_batch.gather(1, topk_indices).float()
+        # DCG@k
+        gains = 2**relevance - 1
+        discounts = torch.log2(torch.arange(2, k + 2, device=relevance.device, dtype=torch.float))
+        dcg = (gains / discounts).sum(dim=1)
+        # IDCG@k (ideal DCG)
+        sorted_relevance, _ = torch.sort(target_batch.float(), dim=1, descending=True)
+        ideal_gains = 2 ** sorted_relevance[:, :k] - 1
+        ideal_discounts = torch.log2(torch.arange(2, k + 2, device=relevance.device, dtype=torch.float))
+        idcg = (ideal_gains / ideal_discounts).sum(dim=1)
+        idcg[idcg == 0] = 1
+        # nDCG@k
+        ndcg.append(dcg / idcg)
+    return torch.cat(ndcg).detach().cpu().numpy()
+
+
 def evaluate_cosine_similarity(model, inputs: Dataloader) -> np.ndarray:
     cosine = []
     for input_batch in inputs:
