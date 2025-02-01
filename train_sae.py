@@ -16,6 +16,7 @@ from util import (
     load_config_from_checkpoint,
     run_training_loop,
     load_checkpoint,
+    set_seed,
 )
 
 
@@ -27,11 +28,11 @@ def train_sae(cfg: dict, device: torch.device):
     print(f"Source model config: {pretrained_model_cfg}")
 
     _, train_csr, val_csr, _, _, _, _, _ = prepare_interaction_data(pretrained_model_cfg)
-    train_interaction_dataloader = Dataloader(train_csr, pretrained_model_cfg["batch_size"], device, pretrained_model_cfg["seed"])
+    train_interaction_dataloader = Dataloader(train_csr, pretrained_model_cfg["batch_size"], device)
     val_interaction_dataloader = Dataloader(val_csr, pretrained_model_cfg["batch_size"], device)
 
     pretrained_model_class = getattr(importlib.import_module(pretrained_model_cfg["model_module"]), pretrained_model_cfg["model_class"])
-    pretrained_model = pretrained_model_class(train_csr.shape[1], pretrained_model_cfg["embedding_dim"], pretrained_model_cfg["seed"]).to(device)
+    pretrained_model = pretrained_model_class(train_csr.shape[1], pretrained_model_cfg["embedding_dim"]).to(device)
     load_checkpoint(pretrained_model, None, pretrained_model_checkpoint, device)
     train_user_embeddings = np.vstack(
         [
@@ -47,11 +48,11 @@ def train_sae(cfg: dict, device: torch.device):
     )
     print(f"Train user embeddings shape={train_user_embeddings.shape}, val user embeddings shape={val_user_embeddings.shape}")
 
-    train_dataloader = Dataloader(train_user_embeddings, cfg["batch_size"], device, cfg["seed"])
+    train_dataloader = Dataloader(train_user_embeddings, cfg["batch_size"], device, shuffle=True)
     val_dataloader = Dataloader(val_user_embeddings, cfg["batch_size"], device)
     sae_model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     sae_extra_params = {k: cfg[k] for k in cfg.keys() if k in ["l1_coef", "k"]}
-    sae_model = sae_model_class(train_user_embeddings.shape[1], cfg["embedding_dim"], cfg["seed"], **sae_extra_params).to(device)
+    sae_model = sae_model_class(train_user_embeddings.shape[1], cfg["embedding_dim"], **sae_extra_params).to(device)
     optimizer = optim.Adam(sae_model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     run_training_loop(sae_model, optimizer, train_dataloader, val_dataloader, cfg, device)
@@ -66,7 +67,7 @@ def train_sae(cfg: dict, device: torch.device):
     )
 
     # Evaluation 2: degradation in Recall @ k ( disentangled model (=with SAE inserted) vs unmodified pretrained model )
-    val_inputs, val_targets = split_input_target_interactions(val_csr, pretrained_model_cfg["target_interaction_ratio"], pretrained_model_cfg["seed"])
+    val_inputs, val_targets = split_input_target_interactions(val_csr, pretrained_model_cfg["target_interaction_ratio"])
     pretrained_model.eval()
     pretrained_model_recall_results = evaluate_recall_at_k(
         pretrained_model,
@@ -100,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_module", type=str, default="sae", help="Module containing SAE model")
     parser.add_argument("--model_class", type=str, default="BasicSAE", help="Model class name")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of SAE model")
+    parser.add_argument("--reconstruction_loss", type=str, default="L2", help="Reconstruction loss (L2 or Cosine)")
     parser.add_argument("--l1_coef", type=float, default=0.01, help="L1 loss coefficient (BasicSAE, TopKSAE)")
     parser.add_argument("--k", type=int, default=32, help="Top K parameter (TopKSAE)")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
@@ -111,4 +113,5 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.mps.is_available() else torch.device("cpu")
+    set_seed(cfg["seed"])
     train_sae(cfg, device)
