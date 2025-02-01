@@ -12,6 +12,7 @@ from tqdm import tqdm
 from datasets import Dataloader
 
 CHECKPOINT_FOLDER = "checkpoints"
+RESULTS_FOLDER = "results"
 
 
 def set_seed(seed: int) -> None:
@@ -36,6 +37,10 @@ def get_checkpoint_filepath(cfg: dict) -> str:
     return f"{CHECKPOINT_FOLDER}/{cfg['dataset']}/{get_checkpoint_name(cfg)}.ckpt"
 
 
+def get_results_filepath(cfg: dict) -> str:
+    return f"{RESULTS_FOLDER}/{cfg['dataset']}/{get_checkpoint_name(cfg)}.json"
+
+
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, job_cfg: dict, filepath: str) -> None:
     checkpoint = {
         "epoch": epoch,
@@ -45,6 +50,12 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, jo
     }
     os.makedirs("/".join(filepath.split("/")[:-1]), exist_ok=True)
     torch.save(checkpoint, filepath)
+
+
+def save_results(results_dict: dict, job_cfg: dict, filepath: str) -> None:
+    os.makedirs("/".join(filepath.split("/")[:-1]), exist_ok=True)
+    with open(filepath, "w") as f:
+        json.dump({"job_cfg": job_cfg, "results": results_dict}, f, indent=4)
 
 
 def load_config_from_checkpoint(filepath: str) -> dict:
