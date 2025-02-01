@@ -26,8 +26,8 @@ def evaluate_on_split(model, split: sp.csr_matrix, cfg: dict, device: torch.devi
     recalls = evaluate_recall_at_k(model, inputs, targets, cfg["eval_topk"])
     ndcgs = evaluate_ndcg_at_k(model, inputs, targets, cfg["eval_topk"])
     return {
-        "Recall": {"mean": float(np.mean(recalls)), "se": float(np.std(recalls) / np.sqrt(len(recalls)))},
-        "nDCG": {"mean": float(np.mean(ndcgs)), "se": float(np.std(ndcgs) / np.sqrt(len(ndcgs)))},
+        "recall": {"mean": float(np.mean(recalls)), "se": float(np.std(recalls) / np.sqrt(len(recalls)))},
+        "ndcg": {"mean": float(np.mean(ndcgs)), "se": float(np.std(ndcgs) / np.sqrt(len(ndcgs)))},
     }
 
 
@@ -45,12 +45,11 @@ def train_elsa(cfg: dict, device: torch.device):
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
     load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)
-    val_results = evaluate_on_split(model, val_csr, cfg, device)
-    test_results = evaluate_on_split(model, test_csr, cfg, device)
-    for split, results in [("Val", val_results), ("Test", test_results)]:
-        for m in results.keys():
-            print(f"Model = {get_checkpoint_name(cfg)} | Split = {split} | {m} @ {cfg['eval_topk']} = {results[m]['mean']:.6f} +- {results[m]['se']:.6f}")
-    save_results({"Val": val_results, "Test": test_results}, cfg, get_results_filepath(cfg))
+    results = {"val": evaluate_on_split(model, val_csr, cfg, device), "test": evaluate_on_split(model, test_csr, cfg, device)}
+    for split, split_res in results.items():
+        for m in split_res.keys():
+            print(f"model = {get_checkpoint_name(cfg)} | split = {split} | {m} @ {cfg['eval_topk']} = {split_res[m]['mean']:.6f} +- {split_res[m]['se']:.6f}")
+    save_results(results, cfg, get_results_filepath(cfg))
 
 
 if __name__ == "__main__":
