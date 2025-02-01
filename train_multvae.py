@@ -20,7 +20,7 @@ from util import (
 
 
 def evaluate_on_split(model, split: sp.csr_matrix, cfg: dict, device: torch.device) -> dict:
-    inputs, targets = split_input_target_interactions(split, cfg["target_interaction_ratio"], cfg["seed"])
+    inputs, targets = split_input_target_interactions(split, cfg["target_interaction_ratio"])
     inputs, targets = Dataloader(inputs, cfg["batch_size"], device), Dataloader(targets, cfg["batch_size"], device)
     model.eval()
     recalls = evaluate_recall_at_k(model, inputs, targets, cfg["eval_topk"])
@@ -35,11 +35,11 @@ def train_multvae(cfg: dict, device: torch.device):
     print(f"Training MultVAE model using config {cfg}")
 
     _, train_csr, val_csr, test_csr, _, _, _, _ = prepare_interaction_data(cfg)
-    train_dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
+    train_dataloader = Dataloader(train_csr, cfg["batch_size"], device, shuffle=True)
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"], cfg["seed"]).to(device)
+    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)

@@ -73,10 +73,9 @@ def convert_to_csr(interactions_df: pl.DataFrame) -> tuple[sp.csr_matrix, np.nda
 
 
 def split_train_val_test_users(
-    users, user_item_csr: sp.csr_matrix, val_ratio: float, test_ratio: float, seed: int
+    users, user_item_csr: sp.csr_matrix, val_ratio: float, test_ratio: float
 ) -> tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, np.ndarray, np.ndarray, np.ndarray]:
-    rng = np.random.default_rng(seed)
-    p = rng.permutation(user_item_csr.shape[0])
+    p = np.random.permutation(user_item_csr.shape[0])
     train_user_idxs = p[: int(-(val_ratio + test_ratio) * len(p))]
     val_user_idxs = p[int(-(val_ratio + test_ratio) * len(p)) : int(-test_ratio * len(p))]
     test_user_idxs = p[int(-test_ratio * len(p)) :]
@@ -97,16 +96,14 @@ def prepare_interaction_data(cfg: dict) -> tuple[pl.DataFrame, sp.csr_matrix, sp
         interactions_csr,
         cfg["val_user_ratio"],
         cfg["test_user_ratio"],
-        cfg["seed"],
     )
     return interactions_df, train_csr, val_csr, test_csr, train_users, val_users, test_users, items
 
 
-def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: float, seed: int) -> tuple[sp.csr_matrix, sp.csr_matrix]:
-    rng = np.random.default_rng(seed)
+def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: float) -> tuple[sp.csr_matrix, sp.csr_matrix]:
     target_mask = np.concatenate(
         [
-            rng.permuted(np.array([True] * int(np.ceil(row_nnz * target_ratio)) + [False] * int((row_nnz - np.ceil(row_nnz * target_ratio)))))
+            np.random.permutation(np.array([True] * int(np.ceil(row_nnz * target_ratio)) + [False] * int((row_nnz - np.ceil(row_nnz * target_ratio)))))
             for row_nnz in np.diff(user_item_csr.indptr)
         ]
     )
@@ -119,18 +116,18 @@ def split_input_target_interactions(user_item_csr: sp.csr_matrix, target_ratio: 
 
 
 class Dataloader:
-    def __init__(self, data: sp.csr_matrix | np.ndarray | torch.Tensor, batch_size: int, device: torch.device, seed: int | None = None):
+    def __init__(self, data: sp.csr_matrix | np.ndarray | torch.Tensor, batch_size: int, device: torch.device, shuffle: bool = False):
         self.data = data
         self.dataset_size = self.data.shape[0]
         self.batch_size = batch_size
         self.device = device
-        self.rng = np.random.default_rng(seed) if seed is not None else None  # if seed = None, loading is deterministic
+        self.shuffle = shuffle
 
     def __len__(self) -> int:
         return -(-self.dataset_size // self.batch_size)
 
     def __iter__(self):
-        self.permutation = self.rng.permutation(self.dataset_size) if self.rng is not None else np.arange(self.dataset_size)
+        self.permutation = np.random.permutation(self.dataset_size) if self.shuffle else np.arange(self.dataset_size)
         self.i = 0
         return self
 

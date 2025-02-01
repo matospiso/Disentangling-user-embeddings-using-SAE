@@ -17,24 +17,22 @@ class MultVAE(nn.Module):
     """Multinomial Variational Autoencoder for collaborative filtering
     Paper: https://arxiv.org/pdf/1802.05814"""
 
-    def __init__(self, input_dim: int, hidden_dims: list[int], embedding_dim: int, seed: int):
+    def __init__(self, input_dim: int, hidden_dims: list[int], embedding_dim: int):
         super().__init__()
-        self.rng = torch.Generator()
-        self.rng.manual_seed(seed)
 
         dims = [input_dim] + hidden_dims + [embedding_dim]
         self.encoder = nn.Sequential()
         for i in range(len(dims) - 2):
-            linear = Linear(nn.init.xavier_uniform_(torch.empty([dims[i + 1], dims[i]]), generator=self.rng), torch.zeros(dims[i + 1]))
+            linear = Linear(nn.init.xavier_uniform_(torch.empty([dims[i + 1], dims[i]])), torch.zeros(dims[i + 1]))
             self.encoder.add_module("fc{}".format(i), linear)
             self.encoder.add_module("act{}".format(i), nn.Tanh())
-        self.encoder_mu = Linear(nn.init.xavier_uniform_(torch.empty([dims[-1], dims[-2]]), generator=self.rng), torch.zeros(dims[-1]))
-        self.encoder_logvar = Linear(nn.init.xavier_uniform_(torch.empty([dims[-1], dims[-2]]), generator=self.rng), torch.zeros(dims[-1]))
+        self.encoder_mu = Linear(nn.init.xavier_uniform_(torch.empty([dims[-1], dims[-2]])), torch.zeros(dims[-1]))
+        self.encoder_logvar = Linear(nn.init.xavier_uniform_(torch.empty([dims[-1], dims[-2]])), torch.zeros(dims[-1]))
 
         dims = dims[::-1]
         self.decoder = nn.Sequential()
         for i in range(len(dims) - 1):
-            w = nn.init.xavier_uniform_(torch.empty([dims[i + 1], dims[i]]), generator=self.rng)
+            w = nn.init.xavier_uniform_(torch.empty([dims[i + 1], dims[i]]))
             b = torch.zeros(dims[i + 1])
             self.decoder.add_module("fc{}".format(i), Linear(w, b))
             if i != len(dims) - 2:
@@ -45,8 +43,7 @@ class MultVAE(nn.Module):
         return self.encoder_mu(h), self.encoder_logvar(h)
 
     def sample_from_prior(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        eps = torch.randn(mu.shape, dtype=mu.dtype, generator=self.rng).to(mu.device)
-        return mu + eps * logvar.exp().sqrt()
+        return mu + torch.randn_like(mu) * logvar.exp().sqrt()
 
     def decode(self, e: torch.Tensor) -> torch.Tensor:
         return torch.softmax(self.decoder(e), dim=-1)

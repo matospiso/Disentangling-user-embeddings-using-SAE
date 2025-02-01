@@ -13,11 +13,9 @@ class ELSA(nn.Module):
     """Scalable Linear Shallow Autoencoder
     Paper: https://dl.acm.org/doi/abs/10.1145/3523227.3551482"""
 
-    def __init__(self, input_dim: int, embedding_dim: int, seed: int):
+    def __init__(self, input_dim: int, embedding_dim: int):
         super().__init__()
-        rng = torch.Generator()
-        rng.manual_seed(seed)
-        self.encoder = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
+        self.encoder = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim])))
         self.normalize_encoder()
 
     @torch.no_grad()

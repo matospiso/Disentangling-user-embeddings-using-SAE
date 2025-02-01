@@ -8,14 +8,12 @@ from util import l2_normalize
 
 
 class SAE(nn.Module):
-    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int):
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str):
         super().__init__()
-        rng = torch.Generator()
-        rng.manual_seed(seed)
         self.reconstruction_loss = reconstruction_loss
-        self.encoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim]), generator=rng))
+        self.encoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([input_dim, embedding_dim])))
         self.encoder_b = nn.Parameter(torch.zeros(embedding_dim))
-        self.decoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([embedding_dim, input_dim]), generator=rng))
+        self.decoder_w = nn.Parameter(nn.init.kaiming_uniform_(torch.empty([embedding_dim, input_dim])))
         self.decoder_b = nn.Parameter(torch.zeros(input_dim))
         self.normalize_decoder()
 
@@ -80,8 +78,8 @@ class SAE(nn.Module):
 
 
 class BasicSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int, **extra_params: dict):
-        super().__init__(input_dim, embedding_dim, reconstruction_loss, seed)
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, reconstruction_loss)
         self.l1_coef = extra_params["l1_coef"]
 
     def post_process_embedding(self, e: torch.Tensor) -> torch.Tensor:
@@ -92,8 +90,8 @@ class BasicSAE(SAE):
 
 
 class TopKSAE(SAE):
-    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, seed: int, **extra_params: dict):
-        super().__init__(input_dim, embedding_dim, reconstruction_loss, seed)
+    def __init__(self, input_dim: int, embedding_dim: int, reconstruction_loss: str, **extra_params: dict):
+        super().__init__(input_dim, embedding_dim, reconstruction_loss)
         self.l1_coef = extra_params["l1_coef"]
         self.k = extra_params["k"]
 
