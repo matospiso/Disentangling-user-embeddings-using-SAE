@@ -179,3 +179,13 @@ def evaluate_l0(model, inputs: Dataloader) -> np.ndarray:
         e = model.encode(input_batch)[0]
         l0s.append((e > 0).float().sum(-1))
     return torch.cat(l0s).detach().cpu().numpy()
+
+
+def evaluate_dead_neurons(model, inputs: Dataloader) -> np.ndarray:
+    dead_neurons = None
+    for input_batch in inputs:
+        e = model.encode(input_batch)[0]
+        if dead_neurons is None:
+            dead_neurons == np.arange(input_batch.shape[1])
+        dead_neurons = np.intersect1d(dead_neurons, np.where((e != 0).sum(0).detach().cpu().numpy() == 0)[0])
+    return len(dead_neurons)
