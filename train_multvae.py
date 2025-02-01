@@ -1,35 +1,52 @@
 import argparse
 import importlib
 import numpy as np
+import scipy.sparse as sp
 import torch
 import torch.optim as optim
 
 from datasets import Dataloader, prepare_interaction_data, split_input_target_interactions
-from util import evaluate_recall_at_k, get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, run_training_loop
+from util import evaluate_ndcg_at_k, evaluate_recall_at_k, get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, run_training_loop
+
+
+def evaluate_on_split(model, split: tuple[str, sp.csr_matrix], cfg: dict, device: torch.device) -> dict:
+    inputs, targets = split_input_target_interactions(split[1], cfg["target_interaction_ratio"], cfg["seed"])
+    inputs, targets = Dataloader(inputs, cfg["batch_size"], device), Dataloader(targets, cfg["batch_size"], device)
+    model.eval()
+    recalls = evaluate_recall_at_k(model, inputs, targets, cfg["eval_topk"])
+    ndcgs = evaluate_ndcg_at_k(model, inputs, targets, cfg["eval_topk"])
+    results_dict = {
+        "cfg": cfg,
+        "split": split[0],
+        "results": {
+            "Recall": {"mean": np.mean(recalls), "se": np.std(recalls) / np.sqrt(len(recalls))},
+            "nDCG": {"mean": np.mean(ndcgs), "se": np.std(ndcgs) / np.sqrt(len(ndcgs))},
+        },
+    }
+    for m in results_dict["results"].keys():
+        print(
+            f"Model = {get_checkpoint_name(cfg)} | Split = {split[0]} | {m} @ {cfg['eval_topk']} = {results_dict['results'][m]['mean']:.6f} +- {results_dict['results'][m]['se']:.6f}"
+        )
+    return results_dict
 
 
 def train_multvae(cfg: dict, device: torch.device):
     print(f"Training MultVAE model using config {cfg}")
 
-    _, train_csr, val_csr, _, _, _, _, _ = prepare_interaction_data(cfg)
+    _, train_csr, val_csr, test_csr, _, _, _, _ = prepare_interaction_data(cfg)
     train_dataloader = Dataloader(train_csr, cfg["batch_size"], device, cfg["seed"])
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",")], cfg["embedding_dim"], cfg["seed"]).to(device)
+    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"], cfg["seed"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
     load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)
-    model.eval()
-    val_inputs, val_targets = split_input_target_interactions(val_csr, cfg["target_interaction_ratio"], cfg["seed"])
-    eval_results = evaluate_recall_at_k(
-        model, Dataloader(val_inputs, cfg["batch_size"], device), Dataloader(val_targets, cfg["batch_size"], device), cfg["eval_topk"]
-    )
-    print(
-        f"Model = {get_checkpoint_name(cfg)} | Recall @ {cfg['eval_topk']} = {np.mean(eval_results):.6f} +- {np.std(eval_results) / np.sqrt(len(eval_results)):.6f}"
-    )
+    
+    val_results = evaluate_on_split(model, ("Val", val_csr), cfg, device)
+    test_results = evaluate_on_split(model, ("Test", test_csr), cfg, device)
 
 
 if __name__ == "__main__":
