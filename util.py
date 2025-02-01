@@ -171,3 +171,11 @@ def evaluate_cosine_similarity(model, inputs: Dataloader) -> np.ndarray:
         output_batch = model(input_batch)[0]
         cosine.append(nn.functional.cosine_similarity(input_batch, output_batch, 1))
     return torch.cat(cosine).detach().cpu().numpy()
+
+
+def evaluate_l0(model, inputs: Dataloader) -> np.ndarray:
+    l0s = []
+    for input_batch in inputs:
+        e = model.encode(input_batch)[0]
+        l0s.append((e > 0).float().sum(-1))
+    return torch.cat(l0s).detach().cpu().numpy()
