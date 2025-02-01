@@ -15,6 +15,7 @@ from util import (
     load_checkpoint,
     run_training_loop,
     save_results,
+    set_seed,
 )
 
 
@@ -71,4 +72,5 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=float, default=42, help="Random seed")
     cfg = vars(parser.parse_args())
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.mps.is_available() else torch.device("cpu")
+    set_seed(cfg["seed"])
     train_elsa(cfg, device)

@@ -58,7 +58,7 @@ class MultVAE(nn.Module):
         return self.decode(mu)
 
     def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
-        mu, logvar = self.encode(nn.functional.dropout(batch, 0.5))  # TODO refactor away + fix seed
+        mu, logvar = self.encode(nn.functional.dropout(batch, 0.5))
         out = self.decode(self.sample_from_prior(mu, logvar))
         beta = 0.2  # TODO implement annealing
         nll = -torch.sum(batch * torch.log(torch.clamp(out, min=1e-7)), dim=-1)
