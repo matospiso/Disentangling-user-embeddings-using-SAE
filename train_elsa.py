@@ -6,28 +6,28 @@ import torch
 import torch.optim as optim
 
 from datasets import Dataloader, prepare_interaction_data, split_input_target_interactions
-from util import evaluate_ndcg_at_k, evaluate_recall_at_k, get_checkpoint_filepath, get_checkpoint_name, load_checkpoint, run_training_loop
+from util import (
+    evaluate_ndcg_at_k,
+    evaluate_recall_at_k,
+    get_checkpoint_filepath,
+    get_checkpoint_name,
+    get_results_filepath,
+    load_checkpoint,
+    run_training_loop,
+    save_results,
+)
 
 
-def evaluate_on_split(model, split: tuple[str, sp.csr_matrix], cfg: dict, device: torch.device) -> dict:
-    inputs, targets = split_input_target_interactions(split[1], cfg["target_interaction_ratio"], cfg["seed"])
+def evaluate_on_split(model, split: sp.csr_matrix, cfg: dict, device: torch.device) -> dict:
+    inputs, targets = split_input_target_interactions(split, cfg["target_interaction_ratio"], cfg["seed"])
     inputs, targets = Dataloader(inputs, cfg["batch_size"], device), Dataloader(targets, cfg["batch_size"], device)
     model.eval()
     recalls = evaluate_recall_at_k(model, inputs, targets, cfg["eval_topk"])
     ndcgs = evaluate_ndcg_at_k(model, inputs, targets, cfg["eval_topk"])
-    results_dict = {
-        "cfg": cfg,
-        "split": split[0],
-        "results": {
-            "Recall": {"mean": np.mean(recalls), "se": np.std(recalls) / np.sqrt(len(recalls))},
-            "nDCG": {"mean": np.mean(ndcgs), "se": np.std(ndcgs) / np.sqrt(len(ndcgs))},
-        },
+    return {
+        "Recall": {"mean": float(np.mean(recalls)), "se": float(np.std(recalls) / np.sqrt(len(recalls)))},
+        "nDCG": {"mean": float(np.mean(ndcgs)), "se": float(np.std(ndcgs) / np.sqrt(len(ndcgs)))},
     }
-    for m in results_dict["results"].keys():
-        print(
-            f"Model = {get_checkpoint_name(cfg)} | Split = {split[0]} | {m} @ {cfg['eval_topk']} = {results_dict['results'][m]['mean']:.6f} +- {results_dict['results'][m]['se']:.6f}"
-        )
-    return results_dict
 
 
 def train_elsa(cfg: dict, device: torch.device):
@@ -44,9 +44,12 @@ def train_elsa(cfg: dict, device: torch.device):
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
     load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)
-
-    val_results = evaluate_on_split(model, ("Val", val_csr), cfg, device)
-    test_results = evaluate_on_split(model, ("Test", test_csr), cfg, device)
+    val_results = evaluate_on_split(model, val_csr, cfg, device)
+    test_results = evaluate_on_split(model, test_csr, cfg, device)
+    for split, results in [("Val", val_results), ("Test", test_results)]:
+        for m in results.keys():
+            print(f"Model = {get_checkpoint_name(cfg)} | Split = {split} | {m} @ {cfg['eval_topk']} = {results[m]['mean']:.6f} +- {results[m]['se']:.6f}")
+    save_results({"Val": val_results, "Test": test_results}, cfg, get_results_filepath(cfg))
 
 
 if __name__ == "__main__":
