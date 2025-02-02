@@ -1,4 +1,3 @@
-import ast
 from copy import deepcopy
 from hashlib import sha256
 import json
@@ -92,6 +91,7 @@ def run_training_loop(
     val_dataloader: Dataloader,
     cfg: dict,
     device: torch.device,
+    save_ckpt: bool,
 ) -> None:
     checkpoint_path = get_checkpoint_filepath(cfg)
     try:
@@ -137,12 +137,12 @@ def run_training_loop(
                 break
 
     if cfg["early_stopping"] > 0 and best_model_state is not None:
-        print(f"Loading best model from epoch {best_epoch + 1} with val loss {best_loss:.3f}.")
+        print(f"Loading best model from epoch {best_epoch + 1} with val loss {best_loss:.5f}.")
         epoch = best_epoch
         model.load_state_dict(best_model_state)
         optimizer.load_state_dict(best_optimizer_state)
-    
-    if ast.literal_eval(os.environ.get("SAVE_CKPT", "True")):
+
+    if save_ckpt:
         save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
     print(f"Training loop for {get_checkpoint_name(cfg)} took {time.perf_counter() - start_time:.4f} seconds.")
 
