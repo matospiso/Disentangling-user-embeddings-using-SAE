@@ -39,7 +39,7 @@ def train_multvae(cfg: dict, device: torch.device):
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"]).to(device)
+    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"], cfg["annealing_beta"], cfg["annealing_steps"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
@@ -62,8 +62,10 @@ if __name__ == "__main__":
     parser.add_argument("--model_class", type=str, default="MultVAE", help="Model class name")
     parser.add_argument("--hidden_dims", type=str, default="", help="Comma-separated hidden layer dimensions")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of MultVAE model")
+    parser.add_argument("--annealing_beta", type=float, default=1.0, help="Annealing beta")
+    parser.add_argument("--annealing_steps", type=int, default=200000, help="Annealing steps")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
-    parser.add_argument("--early_stopping", type=int, default=10, help="Early stopping number of epochs")
+    parser.add_argument("--early_stopping", type=int, default=0, help="Early stopping number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--beta1", type=float, default=0.9, help="Adam beta_1 coefficient")

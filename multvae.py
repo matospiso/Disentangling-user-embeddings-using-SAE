@@ -17,7 +17,7 @@ class MultVAE(nn.Module):
     """Multinomial Variational Autoencoder for collaborative filtering
     Paper: https://arxiv.org/pdf/1802.05814"""
 
-    def __init__(self, input_dim: int, hidden_dims: list[int], embedding_dim: int):
+    def __init__(self, input_dim: int, hidden_dims: list[int], embedding_dim: int, annealing_beta: float, annealing_steps: int):
         super().__init__()
 
         dims = [input_dim] + hidden_dims + [embedding_dim]
@@ -38,6 +38,10 @@ class MultVAE(nn.Module):
             if i != len(dims) - 2:
                 self.decoder.add_module("act{}".format(i), nn.Tanh())
 
+        self.annealing_beta = annealing_beta
+        self.annealing_steps = annealing_steps
+        self.beta = 0
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         h = self.encoder(x)
         return self.encoder_mu(h), self.encoder_logvar(h)
@@ -57,16 +61,16 @@ class MultVAE(nn.Module):
     def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
         mu, logvar = self.encode(nn.functional.dropout(batch, 0.5))
         out = self.decode(self.sample_from_prior(mu, logvar))
-        beta = 0.2  # TODO implement annealing
-        nll = -torch.sum(batch * torch.log(torch.clamp(out, min=1e-7)), dim=-1)
-        d_kl = torch.sum(-0.5 * (1 + logvar - mu.pow(2) - torch.exp(logvar)), dim=-1)
-        return {"NLL": torch.mean(nll), "D_KL": torch.mean(d_kl), "Loss": torch.mean(nll + beta * d_kl)}
+        nll = -torch.mean(batch * torch.log(torch.clamp(out, min=1e-7)), dim=-1)  # NLL / number of items
+        d_kl = torch.mean(-0.5 * (1 + logvar - mu.pow(2) - torch.exp(logvar)), dim=-1)  # D_KL / embedding_dim
+        return {"NLL": torch.mean(nll), "D_KL": torch.mean(d_kl), "Loss": torch.mean(nll + self.beta * d_kl)}
 
     def train_step(self, optimizer: optim.Optimizer, batch: torch.Tensor) -> dict[str, torch.Tensor]:
         losses = self.compute_loss_dict(batch)
         optimizer.zero_grad()
         losses["Loss"].backward()
         optimizer.step()
+        self.beta = min(self.beta + self.annealing_beta / self.annealing_steps, self.annealing_beta)
         return losses
 
     @torch.no_grad()
