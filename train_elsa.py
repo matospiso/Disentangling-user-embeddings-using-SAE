@@ -9,10 +9,8 @@ from datasets import Dataloader, prepare_interaction_data, split_input_target_in
 from util import (
     evaluate_ndcg_at_k,
     evaluate_recall_at_k,
-    get_checkpoint_filepath,
     get_checkpoint_name,
     get_results_filepath,
-    load_checkpoint,
     run_training_loop,
     save_results,
     set_seed,
@@ -44,7 +42,6 @@ def train_elsa(cfg: dict, device: torch.device):
 
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
-    load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)
     results = {"val": evaluate_on_split(model, val_csr, cfg, device), "test": evaluate_on_split(model, test_csr, cfg, device)}
     for split, split_res in results.items():
         for m in split_res.keys():

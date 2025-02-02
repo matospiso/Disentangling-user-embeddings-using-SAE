@@ -1,3 +1,5 @@
+import ast
+from copy import deepcopy
 from hashlib import sha256
 import json
 import random
@@ -100,33 +102,48 @@ def run_training_loop(
     if start_epoch == cfg["epochs"]:
         print(f"Checkpoint already trained for {cfg['epochs']} of {cfg['epochs']} epochs, training is complete.")
         return None
-    best_loss, epochs_without_improvement = float("inf"), 0
+
+    if cfg["early_stopping"] > 0:
+        best_loss, epochs_without_improvement = float("inf"), 0
+        best_model_state = None
+        best_optimizer_state = None
+        best_epoch = start_epoch
     start_time = time.perf_counter()
     for epoch in range(start_epoch, cfg["epochs"]):
         model.train()
-        pbar = tqdm(train_dataloader)
+        pbar = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{cfg['epochs']}")
         for i, batch in enumerate(pbar):
             loss_dict = model.train_step(optimizer, batch)
-            pbar.set_description(f"Epoch {epoch + 1}/{cfg['epochs']}", refresh=False)
             pbar.set_postfix({k: v.item() for k, v in loss_dict.items()})
             if i == len(pbar) - 1:
                 model.eval()
                 val_losses = {k: 0.0 for k in loss_dict.keys()}
                 for val_batch in val_dataloader:
-                    _losses = {k: v.item() for k, v in model.compute_loss_dict(val_batch).items()}
-                    for k in val_losses.keys():
-                        val_losses[k] += _losses[k] * val_batch.shape[0] / val_dataloader.dataset_size
-                pbar.set_postfix_str(pbar.postfix + " | Val: " + ", ".join([f"{k}={v:.3f}" for k, v in val_losses.items()]))
-        if val_losses["Loss"] < best_loss:
-            best_loss, epochs_without_improvement = val_losses["Loss"], 0
-        else:
-            epochs_without_improvement += 1
-        if (epoch + 1) % 50 == 0:
-            save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
-        if epochs_without_improvement >= cfg["early_stopping"]:
-            print("Reached early stopping condition, terminating training.")
-            break
-    save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
+                    batch_losses = model.compute_loss_dict(val_batch)
+                    for k, loss_val in batch_losses.items():
+                        val_losses[k] += loss_val.item() * val_batch.shape[0] / val_dataloader.dataset_size
+                pbar.set_postfix_str(pbar.postfix + " | Val: " + ", ".join([f"{k}={v:.5f}" for k, v in val_losses.items()]))
+        if cfg["early_stopping"] > 0:
+            if val_losses["Loss"] < best_loss:
+                best_loss = val_losses["Loss"]
+                best_epoch = epoch
+                best_model_state = deepcopy(model.state_dict())
+                best_optimizer_state = deepcopy(optimizer.state_dict())
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+            if epochs_without_improvement >= cfg["early_stopping"]:
+                print("Reached early stopping condition, terminating training.")
+                break
+
+    if cfg["early_stopping"] > 0 and best_model_state is not None:
+        print(f"Loading best model from epoch {best_epoch + 1} with val loss {best_loss:.3f}.")
+        epoch = best_epoch
+        model.load_state_dict(best_model_state)
+        optimizer.load_state_dict(best_optimizer_state)
+    
+    if ast.literal_eval(os.environ.get("SAVE_CKPT", "True")):
+        save_checkpoint(model, optimizer, epoch + 1, cfg, checkpoint_path)
     print(f"Training loop for {get_checkpoint_name(cfg)} took {time.perf_counter() - start_time:.4f} seconds.")
 
 

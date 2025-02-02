@@ -9,10 +9,8 @@ from datasets import Dataloader, prepare_interaction_data, split_input_target_in
 from util import (
     evaluate_ndcg_at_k,
     evaluate_recall_at_k,
-    get_checkpoint_filepath,
     get_checkpoint_name,
     get_results_filepath,
-    load_checkpoint,
     run_training_loop,
     save_results,
     set_seed,
@@ -44,7 +42,6 @@ def train_multvae(cfg: dict, device: torch.device):
 
     run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
 
-    load_checkpoint(model, None, get_checkpoint_filepath(cfg), device, cfg)
     results = {"val": evaluate_on_split(model, val_csr, cfg, device), "test": evaluate_on_split(model, test_csr, cfg, device)}
     for split, split_res in results.items():
         for m in split_res.keys():
@@ -63,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dims", type=str, default="", help="Comma-separated hidden layer dimensions")
     parser.add_argument("--embedding_dim", type=int, required=True, help="Embedding dimension of MultVAE model")
     parser.add_argument("--annealing_beta", type=float, default=1.0, help="Annealing beta")
-    parser.add_argument("--annealing_steps", type=int, default=200000, help="Annealing steps")
+    parser.add_argument("--annealing_steps", type=int, default=1000000, help="Annealing steps")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--early_stopping", type=int, default=0, help="Early stopping number of epochs")
     parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")

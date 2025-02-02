@@ -70,7 +70,7 @@ class MultVAE(nn.Module):
         optimizer.zero_grad()
         losses["Loss"].backward()
         optimizer.step()
-        self.beta = min(self.beta + self.annealing_beta / self.annealing_steps, self.annealing_beta)
+        self.beta = min(self.beta + 1 / self.annealing_steps, self.annealing_beta)
         return losses
 
     @torch.no_grad()
