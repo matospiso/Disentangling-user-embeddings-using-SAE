@@ -1,0 +1,41 @@
+{
+    "job_cfg": {
+        "dataset": "Electronics",
+        "val_user_ratio": 0.1,
+        "test_user_ratio": 0.1,
+        "target_interaction_ratio": 0.2,
+        "model_module": "elsa",
+        "model_class": "ELSA",
+        "embedding_dim": 2048,
+        "epochs": 25,
+        "early_stopping": 10,
+        "batch_size": 1024,
+        "lr": 0.0003,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "eval_topk": 20,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "recall": {
+                "mean": 0.13174262642860413,
+                "se": 0.0014127534325180406
+            },
+            "ndcg": {
+                "mean": 0.10710671544075012,
+                "se": 0.0012264949452182791
+            }
+        },
+        "test": {
+            "recall": {
+                "mean": 0.13340209424495697,
+                "se": 0.0014126577696032033
+            },
+            "ndcg": {
+                "mean": 0.10863290727138519,
+                "se": 0.0012278597141799296
+            }
+        }
+    }
+}

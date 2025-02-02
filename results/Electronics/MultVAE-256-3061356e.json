@@ -1,0 +1,44 @@
+{
+    "job_cfg": {
+        "dataset": "Electronics",
+        "val_user_ratio": 0.1,
+        "test_user_ratio": 0.1,
+        "target_interaction_ratio": 0.2,
+        "model_module": "multvae",
+        "model_class": "MultVAE",
+        "hidden_dims": "768",
+        "embedding_dim": 256,
+        "annealing_beta": 1.0,
+        "annealing_steps": 1000000,
+        "epochs": 25,
+        "early_stopping": 0,
+        "batch_size": 1024,
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "eval_topk": 20,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "recall": {
+                "mean": 0.07357949763536453,
+                "se": 0.0010758806136098428
+            },
+            "ndcg": {
+                "mean": 0.051171038299798965,
+                "se": 0.0008398949818878468
+            }
+        },
+        "test": {
+            "recall": {
+                "mean": 0.07341212034225464,
+                "se": 0.00108186486053533
+            },
+            "ndcg": {
+                "mean": 0.05147312581539154,
+                "se": 0.0008482694804108276
+            }
+        }
+    }
+}

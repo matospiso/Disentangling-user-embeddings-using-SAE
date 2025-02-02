@@ -1,0 +1,41 @@
+{
+    "job_cfg": {
+        "dataset": "MSD",
+        "val_user_ratio": 0.1,
+        "test_user_ratio": 0.1,
+        "target_interaction_ratio": 0.2,
+        "model_module": "elsa",
+        "model_class": "ELSA",
+        "embedding_dim": 1024,
+        "epochs": 25,
+        "early_stopping": 10,
+        "batch_size": 1024,
+        "lr": 0.0003,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "eval_topk": 20,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "recall": {
+                "mean": 0.2760353684425354,
+                "se": 0.0009582481706031491
+            },
+            "ndcg": {
+                "mean": 0.2701455056667328,
+                "se": 0.0009680846382473076
+            }
+        },
+        "test": {
+            "recall": {
+                "mean": 0.2750812768936157,
+                "se": 0.0009523673914528178
+            },
+            "ndcg": {
+                "mean": 0.2692602276802063,
+                "se": 0.0009610684786684024
+            }
+        }
+    }
+}

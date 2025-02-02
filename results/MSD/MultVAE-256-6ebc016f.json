@@ -1,0 +1,44 @@
+{
+    "job_cfg": {
+        "dataset": "MSD",
+        "val_user_ratio": 0.1,
+        "test_user_ratio": 0.1,
+        "target_interaction_ratio": 0.2,
+        "model_module": "multvae",
+        "model_class": "MultVAE",
+        "hidden_dims": "768",
+        "embedding_dim": 256,
+        "annealing_beta": 1.0,
+        "annealing_steps": 1000000,
+        "epochs": 25,
+        "early_stopping": 0,
+        "batch_size": 1024,
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "eval_topk": 20,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "recall": {
+                "mean": 0.21123434603214264,
+                "se": 0.0008624780753930258
+            },
+            "ndcg": {
+                "mean": 0.20403380692005157,
+                "se": 0.0008663699472402183
+            }
+        },
+        "test": {
+            "recall": {
+                "mean": 0.21121202409267426,
+                "se": 0.0008597355423966874
+            },
+            "ndcg": {
+                "mean": 0.20340342819690704,
+                "se": 0.0008637777508033083
+            }
+        }
+    }
+}
