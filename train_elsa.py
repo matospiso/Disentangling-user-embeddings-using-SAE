@@ -1,5 +1,7 @@
 import argparse
+import ast
 import importlib
+import os
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -40,7 +42,7 @@ def train_elsa(cfg: dict, device: torch.device):
     model = model_class(train_csr.shape[1], cfg["embedding_dim"]).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
-    run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
+    run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device, save_ckpt=ast.literal_eval(os.environ.get("SAVE_CKPT", "True")))
 
     results = {"val": evaluate_on_split(model, val_csr, cfg, device), "test": evaluate_on_split(model, test_csr, cfg, device)}
     for split, split_res in results.items():

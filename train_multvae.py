@@ -1,5 +1,7 @@
 import argparse
+import ast
 import importlib
+import os
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -37,10 +39,12 @@ def train_multvae(cfg: dict, device: torch.device):
     val_dataloader = Dataloader(val_csr, cfg["batch_size"], device)
 
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
-    model = model_class(train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"], cfg["annealing_beta"], cfg["annealing_steps"]).to(device)
+    model = model_class(
+        train_csr.shape[1], [int(x) for x in cfg["hidden_dims"].split(",") if x.strip()], cfg["embedding_dim"], cfg["annealing_beta"], cfg["annealing_steps"]
+    ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"], betas=(cfg["beta1"], cfg["beta2"]))
 
-    run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device)
+    run_training_loop(model, optimizer, train_dataloader, val_dataloader, cfg, device, save_ckpt=ast.literal_eval(os.environ.get("SAVE_CKPT", "True")))
 
     results = {"val": evaluate_on_split(model, val_csr, cfg, device), "test": evaluate_on_split(model, test_csr, cfg, device)}
     for split, split_res in results.items():
