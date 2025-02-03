@@ -33,7 +33,16 @@ def evaluate_on_split(cf_model, sae_model, split: sp.csr_matrix, cf_cfg: dict, s
     inputs, targets = Dataloader(inputs, sae_cfg["batch_size"], device), Dataloader(targets, sae_cfg["batch_size"], device)
     cf_model.eval()
     sae_model.eval()
-    input_embeddings = Dataloader(np.vstack([cf_model.encode(batch).detach().cpu().numpy() for batch in inputs]), sae_cfg["batch_size"], device)
+    input_embeddings = Dataloader(
+        np.vstack(
+            [
+                cf_model.encode(batch).detach().cpu().numpy() if cf_cfg["model_class"] == "ELSA" else cf_model.encode(batch)[0].detach().cpu().numpy()
+                for batch in inputs
+            ]
+        ),
+        sae_cfg["batch_size"],
+        device,
+    )
 
     if cf_cfg["model_class"] == "ELSA":
 
@@ -42,7 +51,7 @@ def evaluate_on_split(cf_model, sae_model, split: sp.csr_matrix, cf_cfg: dict, s
     elif cf_cfg["model_class"] == "MultVAE":
 
         def forward_with_sae(self, x: torch.Tensor) -> torch.Tensor:
-            return self.decode(sae_model(self.encode(x))[0]) - x  # TODO
+            return self.decode(sae_model(self.encode(x)[0])[0])
 
     disentangled_model = deepcopy(cf_model)
     disentangled_model.forward = forward_with_sae.__get__(disentangled_model, disentangled_model.__class__)
@@ -91,12 +100,15 @@ def train_sae(cfg: dict, device: torch.device):
     load_checkpoint(cf_model, None, cf_model_checkpoint, device)
     train_user_embeddings = np.vstack(
         [
-            cf_model.encode(batch).detach().cpu().numpy()
+            cf_model.encode(batch).detach().cpu().numpy() if cf_model_cfg["model_class"] == "ELSA" else cf_model.encode(batch)[0].detach().cpu().numpy()
             for batch in tqdm(train_interaction_dataloader, desc="Computing user embeddings from train interactions")
         ]
     )
     val_user_embeddings = np.vstack(
-        [cf_model.encode(batch).detach().cpu().numpy() for batch in tqdm(val_interaction_dataloader, desc="Computing user embeddings from val interactions")]
+        [
+            cf_model.encode(batch).detach().cpu().numpy() if cf_model_cfg["model_class"] == "ELSA" else cf_model.encode(batch)[0].detach().cpu().numpy()
+            for batch in tqdm(val_interaction_dataloader, desc="Computing user embeddings from val interactions")
+        ]
     )
     print(f"Train user embeddings shape={train_user_embeddings.shape}, val user embeddings shape={val_user_embeddings.shape}")
     train_embedding_dataloader = Dataloader(train_user_embeddings, cfg["batch_size"], device, shuffle=True)
