@@ -1,0 +1,75 @@
+{
+    "job_cfg": {
+        "dataset": "MSD",
+        "pretrained_model_checkpoint": "ELSA-512-024e1350.ckpt",
+        "model_module": "sae",
+        "model_class": "TopKSAE",
+        "embedding_dim": 4096,
+        "reconstruction_loss": "Cosine",
+        "l1_coef": 0.0003,
+        "k": 8,
+        "epochs": 250,
+        "early_stopping": 50,
+        "batch_size": 1024,
+        "lr": 0.0003,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "cosine": {
+                "mean": 0.8791511654853821,
+                "se": 0.00034356659809310115
+            },
+            "l0": {
+                "mean": 8.0,
+                "se": 0.0
+            },
+            "dead neurons": 264,
+            "recall": {
+                "mean": 0.23127618432044983,
+                "se": 0.0008885694510708205
+            },
+            "recall degradation": {
+                "mean": -0.01328186597675085,
+                "se": 0.00028619605574953044
+            },
+            "ndcg": {
+                "mean": 0.22372323274612427,
+                "se": 0.0008889779635842701
+            },
+            "ndcg degradation": {
+                "mean": -0.01455910224467516,
+                "se": 0.00026735323683983297
+            }
+        },
+        "test": {
+            "cosine": {
+                "mean": 0.8800327777862549,
+                "se": 0.00033863091138536114
+            },
+            "l0": {
+                "mean": 8.0,
+                "se": 0.0
+            },
+            "dead neurons": 267,
+            "recall": {
+                "mean": 0.2325439453125,
+                "se": 0.0008940578135981566
+            },
+            "recall degradation": {
+                "mean": -0.014067454263567924,
+                "se": 0.00029183901854736
+            },
+            "ndcg": {
+                "mean": 0.2246706336736679,
+                "se": 0.0008922983828697585
+            },
+            "ndcg degradation": {
+                "mean": -0.014919061213731766,
+                "se": 0.0002753853831888601
+            }
+        }
+    }
+}
