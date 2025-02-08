@@ -35,22 +35,6 @@ def load_interactions_dataframe(dataset_name: str) -> pl.DataFrame:
         interactions_df = interactions_df.filter(
             interactions_df["user_id"].is_in(interactions_df["user_id"].value_counts().filter(pl.col("count") >= 20)["user_id"])
         )
-    elif dataset_name == "Electronics":
-        interactions_df = (
-            pl.scan_ndjson(f"{DATA_FOLDER}/{dataset_name}.json")
-            .rename({"reviewerID": "user_id", "asin": "item_id", "overall": "value"})
-            .select(["user_id", "item_id", "value"])
-            .filter(pl.col("value") >= 4.0)
-            .collect()
-        )
-        print("Removing items with < 25 interactions...")
-        interactions_df = interactions_df.filter(
-            interactions_df["item_id"].is_in(interactions_df["item_id"].value_counts().filter(pl.col("count") >= 25)["item_id"])
-        )
-        print("Removing users with < 5 interactions...")
-        interactions_df = interactions_df.filter(
-            interactions_df["user_id"].is_in(interactions_df["user_id"].value_counts().filter(pl.col("count") >= 5)["user_id"])
-        )
     interactions_df = interactions_df.cast({"user_id": pl.String, "item_id": pl.String, "value": pl.Float32}).cast(
         {"user_id": pl.Categorical, "item_id": pl.Categorical}
     )
