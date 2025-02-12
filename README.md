@@ -48,7 +48,7 @@ python train_elsa.py --dataset DATASET_NAME --embedding_dim EMBEDDING_DIM
 ```
 See `train_elsa.py` for additional arguments and `elsa.py` for implementation.
 
-### Train ELSA model
+### Train MultVAE model
 ```bash
 python train_multvae.py --dataset DATASET_NAME --embedding_dim EMBEDDING_DIM
 ```
