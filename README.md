@@ -35,10 +35,10 @@ Each the files contain the used hyperparameters.
 
 See `results/training_run_results.ipynb`
 
-## Neuron interpretability experiments
+### Neuron interpretability experiments
 See `calculate_mapping_with_tfidf.ipynb` and `visualize_data.ipynb`
 
-## Explainability and steering experiments
+### Explainability and steering experiments
 See `explanations_and_steering.ipynb`
 
 ## More information
