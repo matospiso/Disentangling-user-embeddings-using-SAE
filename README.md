@@ -38,8 +38,8 @@ See `results/training_run_results.ipynb`
 ### Neuron interpretability experiments
 See `calculate_mapping_with_tfidf.ipynb` and `visualize_data.ipynb`
 
-### Explainability and steering experiments
-See `explanations_and_steering.ipynb`
+### Steering experiments
+See `global_steering_effect.ipynb` and `explanations_and_steering.ipynb`
 
 ## More information
 ### Train ELSA model
