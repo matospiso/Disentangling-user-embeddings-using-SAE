@@ -6,3 +6,4 @@ jupyter
 tqdm
 matplotlib
 umap-learn
+plotly
