@@ -1,6 +1,6 @@
-# From Knots to Knobs: Disentangling Collaborative Filtering Autoencoders with Sparse Autoencoders
+# From Knots to Knobs: Towards Steerable Collaborative Filtering Using Sparse Autoencoders
 
-Official repository for the paper *"From Knots to Knobs: Disentangling Collaborative Filtering Autoencoders with Sparse Autoencoders"*, submitted to the **34th ACM International Conference on Information and Knowledge Management (CIKM 2025)** - Full Research Papers Track.
+Official repository for the paper *"From Knots to Knobs: Towards Steerable Collaborative Filtering Using Sparse Autoencoders"*, submitted to the **THE ACM WEB CONFERENCE 2026 (WWW 2026)** - *User Modeling, Personalization and Recommendation* Track.
 
 The repository contains code used in our experiments and instructions for reproducibility.
 
@@ -39,7 +39,9 @@ See [results/training_run_results.ipynb](results/training_run_results.ipynb)
 See [calculate_mapping_with_tfidf.ipynb](calculate_mapping_with_tfidf.ipynb) and [visualize_data.ipynb](visualize_data.ipynb)
 
 ### Steering experiments
-See [global_steering_effect.ipynb](global_steering_effect.ipynb) and [explanations_and_steering.ipynb](explanations_and_steering.ipynb)
+- Quantitative experiments: [steering_evaluation.ipynb](steering_evaluation.ipynb)
+
+- Qualitative experiments: [global_steering_effect.ipynb](global_steering_effect.ipynb) and [explanations_and_steering.ipynb](explanations_and_steering.ipynb)
 
 ## More information
 ### Train ELSA model
