@@ -4,6 +4,8 @@ Official repository for the paper *"From Knots to Knobs: Towards Steerable Colla
 
 This repository contains the implementation, experiment configuration, and reproducibility instructions for our method using sparse autoencoders to build interpretable, steerable collaborative filtering models. It also includes extended results and analyses beyond what could be included in the paper.
 
+### Try our method in an [interactive demo](https://steerable-collaborative-filtering.streamlit.app/).
+
 ## Table of Contents
 - [Method Overview](#method-overview)
 - [Experimental Results](#experimental-results)
