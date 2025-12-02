@@ -17,13 +17,16 @@ from sae import SAE
 device = torch.device("cuda") if torch.cuda.is_available() else (torch.device("mps") if torch.mps.is_available() else torch.device("cpu"))
 
 DATASET = "ML-25M"
-SAE_CHECKPOINT_PATH = f"{CHECKPOINT_FOLDER}/{DATASET}/TopKSAE-8192-d6337b64.ckpt"
+SAE_CHECKPOINT_PATH = f"{CHECKPOINT_FOLDER}/{DATASET}/TopKSAE-8192-d6337b64.ckpt"  # ELSA + L2
 
 # If DATA_FOLDER / CHECKPOINT_FOLDER are strings in your code, you can wrap them:
 DATA_FOLDER_PATH = Path(DATA_FOLDER)
 CHECKPOINT_FOLDER_PATH = Path(CHECKPOINT_FOLDER)
 ML25M_DIR = DATA_FOLDER_PATH / DATASET
 ML25M_ZIP_URL = "https://files.grouplens.org/datasets/movielens/ml-25m.zip"
+IMAGE_LINKS_URL = "https://drive.usercontent.google.com/download" "?id=13090hj8fk_cyUOUe" "Z7lxoH7Yawl2y" "ZYf&export=download&confirm=t"
+ELSA_CHECKPOINT_URL = "https://drive.usercontent.google.com/download" "?id=105pdHpPLiA" "mnFcVkL8NGnGjDSQjMJtWg&export=download&confirm=t"
+SAE_CHECKPOINT_URL = "https://drive.usercontent.google.com/download" "?id=1pUwa_" "w-hGPaYSqcKo" "64zLtOO3DL1mYuM&export=download&confirm=t"
 
 DEFAULT_K = 50
 
@@ -49,6 +52,62 @@ def ensure_ml25m_data():
     unpacked = DATA_FOLDER_PATH / "ml-25m"
     if unpacked.exists():
         unpacked.rename(ML25M_DIR)
+
+
+def _download_file(url: str, dest: Path):
+    """Download a file to dest (streaming) with progress-friendly chunking."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    resp = requests.get(url, stream=True)
+    resp.raise_for_status()
+
+    with open(dest, "wb") as f:
+        for chunk in resp.iter_content(chunk_size=1024 * 1024):
+            if chunk:
+                f.write(chunk)
+
+
+def ensure_image_links():
+    """
+    Ensure checkpoints/ML-25M contains images.csv.
+    Downloads it from Google Drive if missing.
+    """
+    path = DATA_FOLDER_PATH / DATASET
+    path.mkdir(parents=True, exist_ok=True)
+
+    dest = path / "images.csv"
+    if dest.exists():
+        print("images.csv already present.")
+        return
+
+    print("Downloading images.csv...")
+    _download_file(IMAGE_LINKS_URL, dest)
+
+    print("images.csv ready.")
+
+
+def ensure_checkpoints():
+    """
+    Ensure checkpoints/ML-25M exists and contains required files.
+    Downloads the files from Google Drive if missing.
+    """
+    path = CHECKPOINT_FOLDER_PATH / DATASET
+    path.mkdir(parents=True, exist_ok=True)
+
+    files_to_fetch = {
+        "ELSA-1024-10977915.ckpt": ELSA_CHECKPOINT_URL,
+        "TopKSAE-8192-d6337b64.ckpt": SAE_CHECKPOINT_URL,
+    }
+
+    for filename, url in files_to_fetch.items():
+        dest = path / filename
+        if dest.exists():
+            continue
+
+        print(f"Downloading {filename}...")
+        _download_file(url, dest)
+
+    print("All checkpoint files ready.")
 
 
 def compute_tfidf(X: np.ndarray) -> np.ndarray:
@@ -140,6 +199,8 @@ def load_artifacts(alpha: float = 0.0) -> dict:
     - build steered model wrapper
     """
     ensure_ml25m_data()
+    ensure_image_links()
+    ensure_checkpoints()
 
     # --- SAE & ELSA configs / weights ---
     sae_cfg = load_config_from_checkpoint(SAE_CHECKPOINT_PATH)
@@ -220,10 +281,12 @@ def load_artifacts(alpha: float = 0.0) -> dict:
     tag_neuron_activity = pti @ sparse_item_embeddings  # tag x neuron
 
     # tag -> neuron whose firing is most unique to that tag
-    top_neuron_per_tag = compute_tfidf(tag_neuron_activity.toarray()).argmax(axis=1)
+    tag_to_neuron_map = compute_tfidf(tag_neuron_activity.toarray().T).argmax(axis=0)  # term = neuron, document = tag
+    # see Figure 5 in the paper, "best characterizes"
+    # (implemented in `steering_evaluation_ML-25M.ipynb``)
 
     # concept_neuron_mapping: concept = tag index
-    concept_neuron_mapping = torch.tensor(top_neuron_per_tag, dtype=torch.long)
+    concept_neuron_mapping = torch.tensor(tag_to_neuron_map, dtype=torch.long)
 
     # Build the steered model wrapper
     steered_model = SAESteeredModel(elsa, sae, concept_neuron_mapping, alpha=alpha)
