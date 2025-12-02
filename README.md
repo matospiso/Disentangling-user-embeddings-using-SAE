@@ -101,16 +101,16 @@ Our reconstruction accuracy experiments (Figure 2) show that TopK SAEs recover c
 The following plots showcase the effect of sparsification parameters on the activation density (left), reconstruction cosine similarity (center), and downstream recommendation accuracy (nDCG@20; right). All variants use 1024 dimensional backbones. Extended results (backbone dimension ranging between 256 and 2048; downstream accuracy measured in terms of Recall@20) are available in the [figures](./results/figures/reconstruction_accuracy/) directory.
 ##### ML-25M
 <p align="center">
-  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_l0-mean_big.png" width="33%">
-  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_cosine-mean_big.png" width="33%">
-  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_relative-ndcg_big.png" width="33%">
+  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_l0-mean_big.png" width="30%">
+  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_cosine-mean_big.png" width="30%">
+  <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_relative-ndcg_big.png" width="30%">
 </p>
 
 ##### MSD
 <p align="center">
-  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_l0-mean_big.png" width="33%">
-  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_cosine-mean_big.png" width="33%">
-  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_relative-ndcg_big.png" width="33%">
+  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_l0-mean_big.png" width="30%">
+  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_cosine-mean_big.png" width="30%">
+  <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_relative-ndcg_big.png" width="30%">
 </p>
 
 
