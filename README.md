@@ -102,19 +102,20 @@ Our reconstruction accuracy experiments (Figure 2) show that TopK SAEs recover c
 
 The following plots showcase the effect of sparsification parameters on the activation density (left), reconstruction cosine similarity (center), and downstream recommendation accuracy (nDCG@20; right). All variants use 1024 dimensional backbones. Extended results (backbone dimension ranging between 256 and 2048; downstream accuracy measured in terms of Recall@20) are available in the [figures](./results/figures/reconstruction_accuracy/) directory.
 ##### ML-25M
-<p align="center">
+<!-- <p align="center">
   <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_l0-mean_big.png" width="30%">
   <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_cosine-mean_big.png" width="30%">
   <img src="./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_relative-ndcg_big.png" width="30%">
-</p>
+</p> -->
+![Reconstruction Accuracy Results on ML-25M](./results/figures/reconstruction_accuracy/ML-25M_test_dim1024_stacked_big.png)
 
 ##### MSD
-<p align="center">
+<!-- <p align="center">
   <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_l0-mean_big.png" width="30%">
   <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_cosine-mean_big.png" width="30%">
   <img src="./results/figures/reconstruction_accuracy/MSD_test_dim1024_relative-ndcg_big.png" width="30%">
-</p>
-
+</p> -->
+![Reconstruction Accuracy Results on MSD](./results/figures/reconstruction_accuracy/MSD_test_dim1024_stacked_big.png)
 
 Reproducibility details can be found [here](#reconstruction-accuracy-experiments).
 
@@ -283,10 +284,11 @@ Reproducibility details can be found [here](#neuron-interpretability-experiments
 #### Quantitative evaluation (Figure 5)
 Steering experiments show that activating concept-aligned SAE neurons induces smooth, directed shifts in user embeddings and recommendations, with ML-25M (left) and MSD (right) exhibiting essentially identical qualitative behavior. Notably, the MultVAE fragility observed in Section 4.2 also appears in downstream steering accuracy, where its responses are less stable and less aligned with the intended semantic direction.
 
-<p align="center">
+<!-- <p align="center">
   <img src="./results/figures/steering_ML-25M.png" width="45%">
   <img src="./results/figures/steering_MSD.png" width="44.25%">
-</p>
+</p> -->
+![Steering Quality on ML-25M and MSD](./results/figures/steering_stacked.png)
 
 Reproducibility details can be found [here](#steering-experiments).
 
