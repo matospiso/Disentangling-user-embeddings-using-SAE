@@ -1,6 +1,6 @@
-# From Knots to Knobs: Towards Steerable Collaborative Filtering Using Sparse Autoencoders
+# Pulling the Right Levers: Steerable Collaborative Filtering with Sparse Autoencoders
 
-Official repository for the paper *"From Knots to Knobs: Towards Steerable Collaborative Filtering Using Sparse Autoencoders"*.
+Official repository for the paper *"Pulling the Right Levers: Steerable Collaborative Filtering with Sparse Autoencoders"*.
 
 This repository contains the implementation, experiment configuration, and reproducibility instructions for our method using sparse autoencoders to build interpretable, steerable collaborative filtering models. It also includes extended results and analyses beyond what could be included in the paper.
 
