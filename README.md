@@ -97,7 +97,7 @@ def steer(x, neuron_id, alpha):
 
 ## Experimental Results
 ### Accuracy of Backbone Models (Section 4.1)
-To contextualize the results discussed next, Table 1 contains the results of both ELSA and MultVAE on ML-25M and MSD datasets. Here, `d` denotes the dimension of the bottleneck layer. Results are reported as mean ± std. The results for ELSA are on par with those reported in related works, while MultVAE results are approx. 5% lower, probably due to a simpler annealing strategy and less extensive hyperparameter search.
+To contextualize the results discussed next, below are the results of both ELSA and MultVAE on ML-25M and MSD datasets. Here, `d` denotes the dimension of the bottleneck layer. Results are reported as mean ± std. The results for ELSA are on par with those reported in related works, while MultVAE results are approx. 5% lower, probably due to a simpler annealing strategy and less extensive hyperparameter search.
 
 | Dataset | Model   | d    | Recall@20        | nDCG@20          |
 |--------:|---------|-----:|------------------|------------------|
@@ -214,6 +214,36 @@ In all three models, items tagged with *Quentin Tarantino* show one of the most 
 
 </tr>
 </table>
+
+###### Distinctiveness of the Concept–Neuron Mappings
+
+In addition to the quantitative evaluation of concept–neuron mappings, we analyze the **distinctiveness** of these associations.
+Specifically, we consider two mappings:
+- the most distinctive tag for each neuron (`argmax_t M[n → t]`), and
+- the most distinctive neuron for each tag (`argmax_n M[t → n]`).
+
+We observe that a substantial fraction of both tags and active neurons are identified as the most distinctive counterpart for at least one match.
+For example, in the **ELSA+L2** model, **834 unique neurons** are identified as the most specific neuron for at least one tag, while **985 unique tags** are the most distinctive for at least one neuron.
+
+Overlaps—where a neuron or tag is considered most distinctive for multiple counterparts—often reflect meaningful semantic relationships, such as correlated item–tag associations or duplicated metadata.
+For instance:
+- neuron *id8156* is the most specific neuron for the tags *superhero*, *super-hero*, and *comic book*;
+- neuron *id1042* for *archaeology* and *indiana jones*; and
+- neuron *id2491* for *ralph fiennes*, *anthony hopkins*, *edward norton*, *fbi*, and *hannibal lecter*.
+
+In the latter case, the connection arises because all listed actors and characters appear in movies related to the cannibalistic serial killer **Hannibal Lecter**.
+Indeed, the most distinctive tag for this neuron is *hannibal lecter*, which is arguably the most specific descriptor of this latent feature.
+
+To illustrate limitations of neuron interpretability in certain edge cases, consider neuron *id3125*, which emerges as the most distinctive neuron for the tags *space action*, *space adventure*, and *classic sci-fi*.
+This overlap suggests limited granularity that may stem from one or more factors:
+
+1. The SAE may lack sufficient expressiveness to separate closely related concepts, for example due to limited embedding width or neuron collapse during training.
+2. The SAE training data and tag annotations—both derived solely from user interaction data—may not encode fine-grained semantic distinctions.
+3. The conceptual differences themselves may be inherently vague or ambiguous.
+
+In this case, the most likely explanation is a combination of **(3)** and **item popularity bias**.
+Specifically, *Star Wars: Episode IV – A New Hope (1977)*, the most frequently tagged item in the dataset, accounts for over **0.6% of all tag assignments** and is associated with all of the above *space*-related tags.
+This shared association entangles the corresponding tag representations at the item level, making them difficult to disentangle using our method, which aggregates tag–neuron links across items.
 
 ##### MSD
 All tags identified as producing the most distinctive sparse activation patterns represent niche music genres. Notably, *stand-up*, a non-rhythmic genre (spoken word), was identified among its top five tags by two out of three models. By contrast, *favorites* was identified as the least informative by two out of three models.
