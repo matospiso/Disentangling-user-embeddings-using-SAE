@@ -96,6 +96,25 @@ def steer(x, neuron_id, alpha):
 
 
 ## Experimental Results
+### Accuracy of Backbone Models (Section 4.1)
+To contextualize the results discussed next, Table 1 contains the results of both ELSA and MultVAE on ML-25M and MSD datasets.
+
+| Dataset | Model   | d    | Recall@20        | nDCG@20          |
+|--------:|---------|-----:|------------------|------------------|
+| ML-25M  | ELSA    | 512  | 0.390 ± 0.002    | 0.353 ± 0.002    |
+| ML-25M  | ELSA    | 1024 | 0.396 ± 0.002    | 0.360 ± 0.002    |
+| ML-25M  | ELSA    | 2048 | 0.397 ± 0.002    | 0.363 ± 0.002    |
+| ML-25M  | MultVAE | 256  | 0.375 ± 0.002    | 0.333 ± 0.002    |
+| ML-25M  | MultVAE | 512  | 0.383 ± 0.002    | 0.340 ± 0.002    |
+| ML-25M  | MultVAE | 1024 | 0.377 ± 0.002    | 0.334 ± 0.002    |
+|        |         |      |                  |                  |
+| MSD     | ELSA    | 512  | 0.245 ± 0.001    | 0.239 ± 0.001    |
+| MSD     | ELSA    | 1024 | 0.275 ± 0.001    | 0.269 ± 0.001    |
+| MSD     | ELSA    | 2048 | 0.298 ± 0.001    | 0.293 ± 0.001    |
+| MSD     | MultVAE | 256  | 0.211 ± 0.001    | 0.203 ± 0.001    |
+| MSD     | MultVAE | 512  | 0.241 ± 0.001    | 0.232 ± 0.001    |
+| MSD     | MultVAE | 1024 | 0.252 ± 0.001    | 0.242 ± 0.001    |
+
 ### Reconstruction Accuracy Experiments (Section 4.2)
 
 Our reconstruction accuracy experiments (Figure 2) show that TopK SAEs recover cosine-like CFAE embeddings (ELSA) with high fidelity and minimal downstream degradation, while achieving a much more stable sparsity-accuracy trade-off than Basic SAEs. **Crucially for applications**, variational embeddings produced by MultVAE are substantially harder to reconstruct, resulting in significant loss of accuracy under SAE-based reconstruction in both the ML-25M and MSD datasets.
