@@ -366,7 +366,21 @@ python -c "from util import load_config_from_checkpoint; filepath='checkpoints/D
 - SAE models were trained using [run_sae_model_training.sh](run_sae_model_training.sh)
 - TopK SAE with Cosine loss were trained using [run_topksae_cosine_model_training.sh](run_topksae_cosine_model_training.sh)
 
-Each file lists the used hyperparameters.
+Each file lists the used hyperparameters. In partucilar, all CFAE variants were trained using the **Adam optimizer**. We used a learning rate of **3e-4** for ELSA and **1e-3** for MultVAE, with β₁ = 0.9 and β₂ = 0.99.
+For MultVAE, the β parameter was annealed by **1e-6 per training step**. Both ELSA and MultVAE were trained with a **batch size of 1024** for up to **25 epochs**. For ELSA, **early stopping** was applied after **10 epochs without improvement**
+in validation loss. 
+
+As for SAEs, we considered multiple variants of **Basic SAE** and **Top-k SAE**. For both SAE architectures, we varied the **width-to-input dimension ratio**
+in `{2, 4, 8}`, corresponding to SAE embedding dimensions from **1024 to 4096** for a **512-dimensional CFAE input**.
+- **Basic SAE** has a single sparsity-inducing hyperparameter: the **L1 regularization coefficient**.  
+  We evaluated values in `{0.0003, 0.001, 0.003, 0.01}`.
+
+- **Top-k SAE** was tuned using `k ∈ {8, 16, 32, 64}`.  A small **L1 penalty of 0.0003** was additionally applied to prevent large
+  activation spikes.
+
+All SAE variants were optimized using **Adam** with a learning rate of **3e-4**, β₁ = 0.9, and β₂ = 0.99.
+Training used a **batch size of 1024** for up to **250 epochs**, with **early stopping after 50 epochs** without validation loss improvement.
+
 ##### Evaluation
 - Each training job computed the evaluation after completing. Full evaluation outputs are stored in JSON format in the [results](./results/) folder.
 - The figure was created from the results using [results/training_run_results.ipynb](results/training_run_results.ipynb). This notebook also allows detailed inspection of the results dataframe.
