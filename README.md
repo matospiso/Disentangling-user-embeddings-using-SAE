@@ -97,7 +97,7 @@ def steer(x, neuron_id, alpha):
 
 ## Experimental Results
 ### Accuracy of Backbone Models (Section 4.1)
-To contextualize the results discussed next, Table 1 contains the results of both ELSA and MultVAE on ML-25M and MSD datasets.
+To contextualize the results discussed next, Table 1 contains the results of both ELSA and MultVAE on ML-25M and MSD datasets. Here, `d` denotes the dimension of the bottleneck layer. Results are reported as mean ± std. The results for ELSA are on par with those reported in related works, while MultVAE results are approx. 5% lower, probably due to a simpler annealing strategy and less extensive hyperparameter search.
 
 | Dataset | Model   | d    | Recall@20        | nDCG@20          |
 |--------:|---------|-----:|------------------|------------------|
