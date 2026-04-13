@@ -1,0 +1,46 @@
+{
+    "job_cfg": {
+        "dataset": "ML-25M",
+        "val_user_ratio": 0.1,
+        "test_user_ratio": 0.1,
+        "target_interaction_ratio": 0.2,
+        "model_module": "teaser",
+        "model_class": "TEASERGD",
+        "tag_min_count": 100,
+        "weighted_tags": "False",
+        "lambda1": 0.001,
+        "lambda2": 0.0001,
+        "init_std": 0.01,
+        "epochs": 1,
+        "early_stopping": 0,
+        "batch_size": 4096,
+        "lr": 0.0003,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "eval_topk": 20,
+        "seed": 42,
+        "embedding_dim": 1633
+    },
+    "results": {
+        "val": {
+            "recall": {
+                "mean": 0.04190855845808983,
+                "se": 0.0006505467181366146
+            },
+            "ndcg": {
+                "mean": 0.03980417922139168,
+                "se": 0.0006191881772808559
+            }
+        },
+        "test": {
+            "recall": {
+                "mean": 0.04178498312830925,
+                "se": 0.0006533474517668596
+            },
+            "ndcg": {
+                "mean": 0.039821553975343704,
+                "se": 0.0006183482924564803
+            }
+        }
+    }
+}
