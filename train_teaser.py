@@ -46,6 +46,7 @@ def train_teaser(cfg: dict, device: torch.device):
     model_class = getattr(importlib.import_module(cfg["model_module"]), cfg["model_class"])
     model = model_class(
         item_tag_matrix.to(device),
+        reconstruction_loss=cfg["reconstruction_loss"],
         lambda1=cfg["lambda1"],
         lambda2=cfg["lambda2"],
         init_std=cfg["init_std"],
@@ -71,6 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_class", type=str, default="TEASERGD", help="Model class name")
     parser.add_argument("--tag_min_count", type=int, default=100, help="Minimum metadata tag frequency")
     parser.add_argument("--weighted_tags", type=str, default="False", help="Whether to use weighted metadata assignments when available")
+    parser.add_argument("--reconstruction_loss", type=str, default="MSE", help="Reconstruction loss (MSE or Cosine)")
     parser.add_argument("--lambda1", type=float, default=1e-3, help="Regularization coefficient on the metadata-mediated item-item matrix")
     parser.add_argument("--lambda2", type=float, default=1e-4, help="Regularization coefficient on the encoder")
     parser.add_argument("--init_std", type=float, default=0.01, help="Encoder weight initialization standard deviation")

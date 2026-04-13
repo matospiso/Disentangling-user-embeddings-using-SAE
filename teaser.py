@@ -68,11 +68,13 @@ class TEASERGD(nn.Module):
     def __init__(
         self,
         item_tag_matrix: torch.Tensor,
+        reconstruction_loss: str = "MSE",
         lambda1: float = 1e-3,
         lambda2: float = 1e-4,
         init_std: float = 0.01,
     ):
         super().__init__()
+        self.reconstruction_loss = reconstruction_loss
         self.lambda1 = lambda1
         self.lambda2 = lambda2
         self.num_items, self.num_tags = item_tag_matrix.shape
@@ -105,7 +107,11 @@ class TEASERGD(nn.Module):
     def compute_loss_dict(self, batch: torch.Tensor) -> dict[str, torch.Tensor]:
         decoder = self.decoder()
         out = self(batch)
-        recon = (out - batch).pow(2).mean()
+        recon_losses = {
+            "MSE": (out - batch).pow(2).mean(),
+            "Cosine": (1 - nn.functional.cosine_similarity(out, batch, dim=1, eps=1e-8)).mean(),
+        }
+        recon = recon_losses[self.reconstruction_loss]
 
         gram = decoder.T @ decoder
         item_item_norm_sq = ((self.encoder @ gram) * self.encoder).sum()
@@ -114,6 +120,8 @@ class TEASERGD(nn.Module):
 
         losses = {
             "Recon": recon,
+            "MSE": recon_losses["MSE"],
+            "Cosine": recon_losses["Cosine"],
             "B Fro": offdiag_norm_sq / (self.num_items**2),
             "E Fro": self.encoder.pow(2).mean(),
         }
@@ -134,4 +142,3 @@ class TEASERGD(nn.Module):
             scores = torch.where(interaction_batch != 0, 0, scores)
         topk_scores, topk_indices = torch.topk(scores, k)
         return topk_scores.cpu().numpy(), topk_indices.cpu().numpy()
-
