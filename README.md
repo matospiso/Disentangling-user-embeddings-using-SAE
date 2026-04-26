@@ -333,11 +333,11 @@ Reproducibility details can be found [here](#neuron-interpretability-experiments
 #### Quantitative evaluation (Figure 5)
 Steering experiments show that activating concept-aligned SAE neurons induces smooth, directed shifts in user embeddings and recommendations, with ML-25M (left) and MSD (right) exhibiting essentially identical qualitative behavior. Notably, the MultVAE fragility observed in Section 4.2 also appears in downstream steering accuracy, where its responses are less stable and less aligned with the intended semantic direction.
 
-<!-- <p align="center">
+ <p align="center">
   <img src="./results/figures/steering_ML-25M.png" width="45%">
   <img src="./results/figures/steering_MSD.png" width="44.25%">
-</p> -->
-![Steering Quality on ML-25M and MSD](./results/figures/steering_stacked.png)
+</p> 
+<!--![Steering Quality on ML-25M and MSD](./results/figures/steering_stacked.png)-->
 
 Reproducibility details can be found [here](#steering-experiments).
 
@@ -445,9 +445,9 @@ See [calculate_mapping_with_tfidf_MSD.ipynb](calculate_mapping_with_tfidf_MSD.ip
 #### Steering Experiments
 
 ##### ML-25M
-- **Quantitative evaluation:** [steering_evaluation_ML-25M_topk.ipynb](steering_evaluation_ML-25M.ipynb) implements user-level steering toward metadata-defined segments under increasing steering strength.
+- **Quantitative evaluation:** [steering_evaluation_ML-25M_topk.ipynb](steering_evaluation_ML-25M_topk.ipynb) implements user-level steering toward metadata-defined segments under increasing steering strength.
 
 - **Qualitative evaluation:** [explanations_and_steering.ipynb](explanations_and_steering.ipynb) produces the item-level examples of concept-aligned boosts shown in Figure 4. The UMAP plots showing how embeddings move toward regions anchored by representative items were generated using [global_steering_effect.ipynb](global_steering_effect.ipynb).
 
 ##### MSD
-- **Quantitative evaluation:** See [steering_evaluation_MSD_topk.ipynb](steering_evaluation_MSD.ipynb).
+- **Quantitative evaluation:** See [steering_evaluation_MSD_topk.ipynb](steering_evaluation_MSD_topk.ipynb).
