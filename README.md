@@ -445,9 +445,9 @@ See [calculate_mapping_with_tfidf_MSD.ipynb](calculate_mapping_with_tfidf_MSD.ip
 #### Steering Experiments
 
 ##### ML-25M
-- **Quantitative evaluation:** [steering_evaluation_ML-25M.ipynb](steering_evaluation_ML-25M.ipynb) implements user-level steering toward metadata-defined segments under increasing steering strength.
+- **Quantitative evaluation:** [steering_evaluation_ML-25M_topk.ipynb](steering_evaluation_ML-25M.ipynb) implements user-level steering toward metadata-defined segments under increasing steering strength.
 
-- **Qualitative evaluation:** [explanations_and_steering.ipynb](explanations_and_steering.ipynb) produces the item-level examples of concept-aligned boosts shown in Figure 4. The UMAP plots showing how embeddings move toward regions anchored by representative items (Figure 6; Appendix) were generated using [global_steering_effect.ipynb](global_steering_effect.ipynb).
+- **Qualitative evaluation:** [explanations_and_steering.ipynb](explanations_and_steering.ipynb) produces the item-level examples of concept-aligned boosts shown in Figure 4. The UMAP plots showing how embeddings move toward regions anchored by representative items were generated using [global_steering_effect.ipynb](global_steering_effect.ipynb).
 
 ##### MSD
-- **Quantitative evaluation:** See [steering_evaluation_MSD.ipynb](steering_evaluation_MSD.ipynb).
+- **Quantitative evaluation:** See [steering_evaluation_MSD_topk.ipynb](steering_evaluation_MSD.ipynb).
